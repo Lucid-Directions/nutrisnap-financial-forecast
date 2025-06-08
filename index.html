@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSnap Financial Forecast Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>NutriSnap Financial Forecast Calculator</h1>
+        <p class="subtitle">Interactive 5-Year Financial Projections</p>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Revenue Parameters</h2>
+                
+                <div class="input-group">
+                    <label>Monthly Subscription Price (£/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">The monthly price users pay for premium features. This is the base pricing for your SaaS model.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="number" id="appPrice" value="7.5" min="1" max="50" step="0.5" onchange="updateAnnualPrice()">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Annual Subscription Price (£/year)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="annualPrice" value="72" min="10" max="500" step="1" readonly style="background: #222;">
+                        <span style="color: #4ade80; font-size: 0.9rem;">Auto-calculated</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Annual Discount (%)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Discount offered to users who pay annually instead of monthly. Helps improve cash flow and reduce churn.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="annualDiscount" value="20" min="0" max="30" step="1" oninput="updateSliderValue(this); updateAnnualPrice();">
+                        <span class="range-value">20%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>% of Users Choosing Annual Plan
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected percentage of premium users who will choose annual over monthly billing.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="annualPlanPercentage" value="25" min="0" max="50" step="5" oninput="updateSliderValue(this)">
+                        <span class="range-value">25%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Projection Period</label>
+                    <select id="projectionMonths" onchange="updateCostStructureVisibility(); calculateProjections();">
+                        <option value="18">18 months (into Year 2)</option>
+                        <option value="30">30 months (into Year 3)</option>
+                        <option value="42">42 months (into Year 4)</option>
+                        <option value="54" selected>54 months (into Year 5)</option>
+                        <option value="66">66 months (into Year 6)</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label>Starting MAU
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Monthly Active Users at launch. Your initial user base to start projections from.</span>
+                    </label>
+                    <input type="number" id="startingMAU" value="200" min="50" max="1000" step="50">
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📈 Growth Parameters</h2>
+                
+                <div class="input-group">
+                    <label>Year 1 MAU Growth (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Month-over-month growth rate for Monthly Active Users in Year 1. Higher early growth is typical for startups.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="year1Growth" value="16" min="5" max="30" step="1" oninput="updateSliderValue(this)">
+                        <span class="range-value">16%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Year 2 MAU Growth (%/month)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="year2Growth" value="12" min="5" max="25" step="1" oninput="updateSliderValue(this)">
+                        <span class="range-value">12%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Year 3 MAU Growth (%/month)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="year3Growth" value="9" min="3" max="20" step="1" oninput="updateSliderValue(this)">
+                        <span class="range-value">9%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Year 4 MAU Growth (%/month)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="year4Growth" value="7" min="2" max="15" step="1" oninput="updateSliderValue(this)">
+                        <span class="range-value">7%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Year 5 MAU Growth (%/month)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="year5Growth" value="5" min="1" max="12" step="1" oninput="updateSliderValue(this)">
+                        <span class="range-value">5%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>💰 Conversion & Retention</h2>
+                
+                <div class="input-group">
+                    <label>Initial Conversion Rate (%)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Percentage of free users who convert to premium. Industry average is 2-5% for freemium SaaS.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="initialConversion" value="6" min="2" max="20" step="0.5" oninput="updateSliderValue(this)">
+                        <span class="range-value">6%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Conversion Rate Growth (%/year)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Annual improvement in conversion rate as you optimize the product and onboarding.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="conversionGrowth" value="1.25" min="0" max="3" step="0.25" oninput="updateSliderValue(this)">
+                        <span class="range-value">1.25%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Initial Monthly Churn Rate (%)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Percentage of paying users who cancel each month. Good SaaS churn is 3-5% monthly.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="churnRate" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this)">
+                        <span class="range-value">5%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Churn Improvement Rate (%/year)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Annual reduction in churn rate as you improve product stickiness and value.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="churnImprovement" value="0.75" min="0" max="2" step="0.25" oninput="updateSliderValue(this)">
+                        <span class="range-value">0.75%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>B2B Revenue Start (Month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">When to launch enterprise/B2B features. Typically after product-market fit.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="number" id="b2bStartMonth" value="30" min="12" max="60" step="1">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>B2B Revenue (% of Total)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected percentage of revenue from B2B/enterprise customers once launched.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="b2bPercentage" value="15" min="0" max="30" step="5" oninput="updateSliderValue(this)">
+                        <span class="range-value">15%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>💎 Advanced Pricing Models</h2>
+                
+                <div class="input-group">
+                    <label>Enable Tiered Pricing
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Enable multiple subscription tiers (Basic, Pro, Enterprise) with different pricing and conversion rates.</span>
+                    </label>
+                    <input type="checkbox" id="enableTieredPricing" onchange="toggleTieredPricing()">
+                </div>
+                
+                <div id="tieredPricingSection" style="display: none;">
+                    <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div class="tier-input">
+                            <h4>Basic Tier</h4>
+                            <div class="input-group">
+                                <label>Monthly Price (£)</label>
+                                <input type="number" id="basicPrice" value="5" min="1" max="20" step="0.5">
+                            </div>
+                            <div class="input-group">
+                                <label>Conversion Rate (%)</label>
+                                <input type="range" id="basicConversion" value="8" min="2" max="15" step="0.5" oninput="updateSliderValue(this)">
+                                <span class="range-value">8%</span>
+                            </div>
+                        </div>
+                        <div class="tier-input">
+                            <h4>Pro Tier</h4>
+                            <div class="input-group">
+                                <label>Monthly Price (£)</label>
+                                <input type="number" id="proPrice" value="15" min="10" max="50" step="1">
+                            </div>
+                            <div class="input-group">
+                                <label>Conversion Rate (%)</label>
+                                <input type="range" id="proConversion" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this)">
+                                <span class="range-value">5%</span>
+                            </div>
+                        </div>
+                        <div class="tier-input">
+                            <h4>Enterprise Tier</h4>
+                            <div class="input-group">
+                                <label>Monthly Price (£)</label>
+                                <input type="number" id="enterprisePrice" value="50" min="30" max="200" step="5">
+                            </div>
+                            <div class="input-group">
+                                <label>Conversion Rate (%)</label>
+                                <input type="range" id="enterpriseConversion" value="2" min="0.5" max="5" step="0.25" oninput="updateSliderValue(this)">
+                                <span class="range-value">2%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Cohort Analytics</h2>
+                
+                <div class="input-group">
+                    <label>Enable Cohort Tracking
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Track user retention and revenue by signup month to analyze cohort performance.</span>
+                    </label>
+                    <input type="checkbox" id="enableCohortTracking" onchange="toggleCohortTracking()">
+                </div>
+                
+                <div id="cohortTrackingSection" style="display: none;">
+                    <div class="input-group">
+                        <label>Retention Rate Decay (%/month)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">How much retention decreases each month for new cohorts (seasonal effects).</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="range" id="retentionDecay" value="0.5" min="0" max="2" step="0.1" oninput="updateSliderValue(this)">
+                            <span class="range-value">0.5%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Cohort LTV Multiplier
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">LTV variation factor for different cohorts (1.0 = same, 1.2 = 20% higher for newer cohorts).</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="range" id="cohortLtvMultiplier" value="1.1" min="0.8" max="1.5" step="0.1" oninput="updateSliderValue(this)">
+                            <span class="range-value">1.1x</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🔧 Advanced Cost Modeling</h2>
+                
+                <div class="input-group">
+                    <label>Enable Variable Costs
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Add costs that scale with user growth (support, infrastructure, etc.).</span>
+                    </label>
+                    <input type="checkbox" id="enableVariableCosts" onchange="toggleVariableCosts()">
+                </div>
+                
+                <div id="variableCostsSection" style="display: none;">
+                    <div class="input-group">
+                        <label>Cost Per User Per Month (£)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Variable cost per monthly active user (support, server costs, etc.).</span>
+                        </label>
+                        <input type="number" id="costPerUser" value="0.25" min="0.1" max="5" step="0.05">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Support Cost Per Premium User (£)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Additional support cost per premium user per month.</span>
+                        </label>
+                        <input type="number" id="supportCostPerUser" value="2" min="0.5" max="10" step="0.25">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Infrastructure Scaling Factor
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">How infrastructure costs scale with user growth (0.8 = economies of scale).</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="range" id="infraScaling" value="0.85" min="0.5" max="1.2" step="0.05" oninput="updateSliderValue(this)">
+                            <span class="range-value">0.85x</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>💰 Multiple Funding Rounds</h2>
+            
+            <div class="input-group">
+                <label>Enable Multiple Rounds
+                    <span class="info-icon">?</span>
+                    <span class="tooltip">Model Series A, B, C funding rounds with dilution tracking.</span>
+                </label>
+                <input type="checkbox" id="enableMultipleRounds" onchange="toggleMultipleRounds()">
+            </div>
+            
+            <div id="multipleRoundsSection" style="display: none;">
+                <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                    <div class="funding-round">
+                        <h4>Series A</h4>
+                        <div class="input-group">
+                            <label>Funding Month</label>
+                            <input type="number" id="seriesAMonth" value="18" min="12" max="60" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Amount (£)</label>
+                            <input type="number" id="seriesAAmount" value="1000000" min="500000" max="10000000" step="100000">
+                        </div>
+                        <div class="input-group">
+                            <label>Equity (%)</label>
+                            <input type="range" id="seriesAEquity" value="20" min="10" max="40" step="1" oninput="updateSliderValue(this)">
+                            <span class="range-value">20%</span>
+                        </div>
+                    </div>
+                    <div class="funding-round">
+                        <h4>Series B</h4>
+                        <div class="input-group">
+                            <label>Funding Month</label>
+                            <input type="number" id="seriesBMonth" value="36" min="24" max="72" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Amount (£)</label>
+                            <input type="number" id="seriesBAmount" value="5000000" min="2000000" max="50000000" step="500000">
+                        </div>
+                        <div class="input-group">
+                            <label>Equity (%)</label>
+                            <input type="range" id="seriesBEquity" value="15" min="8" max="30" step="1" oninput="updateSliderValue(this)">
+                            <span class="range-value">15%</span>
+                        </div>
+                    </div>
+                    <div class="funding-round">
+                        <h4>Series C</h4>
+                        <div class="input-group">
+                            <label>Funding Month</label>
+                            <input type="number" id="seriesCMonth" value="54" min="36" max="84" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Amount (£)</label>
+                            <input type="number" id="seriesCAmount" value="15000000" min="5000000" max="100000000" step="1000000">
+                        </div>
+                        <div class="input-group">
+                            <label>Equity (%)</label>
+                            <input type="range" id="seriesCEquity" value="12" min="5" max="25" step="1" oninput="updateSliderValue(this)">
+                            <span class="range-value">12%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>💼 Cost Structure</h2>
+                
+                <div class="input-group">
+                    <label>Monthly Team Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for your team (salaries, benefits, etc.) for each year. The annual cost will be calculated automatically.</span></label>
+                    <div class="cost-inputs">
+                        <div class="cost-year-1">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
+                            <input type="number" id="teamCostY1" value="6000" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="teamCostY1_annual"></span>
+                        </div>
+                        <div class="cost-year-2">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 2</label>
+                            <input type="number" id="teamCostY2" value="12000" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="teamCostY2_annual"></span>
+                        </div>
+                        <div class="cost-year-3">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 3</label>
+                            <input type="number" id="teamCostY3" value="18000" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="teamCostY3_annual"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Monthly Tech Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for technology (servers, software, etc.) for each year. The annual cost will be calculated automatically.</span></label>
+                    <div class="cost-inputs">
+                        <div class="cost-year-1">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
+                            <input type="number" id="techCostY1" value="400" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="techCostY1_annual"></span>
+                        </div>
+                        <div class="cost-year-2">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 2</label>
+                            <input type="number" id="techCostY2" value="1800" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="techCostY2_annual"></span>
+                        </div>
+                        <div class="cost-year-3">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 3</label>
+                            <input type="number" id="techCostY3" value="4000" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="techCostY3_annual"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Monthly Marketing Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for marketing and advertising for each year. The annual cost will be calculated automatically.</span></label>
+                    <div class="cost-inputs">
+                        <div class="cost-year-1">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
+                            <input type="number" id="marketingCostY1" value="1200" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="marketingCostY1_annual"></span>
+                        </div>
+                        <div class="cost-year-2">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 2</label>
+                            <input type="number" id="marketingCostY2" value="3500" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="marketingCostY2_annual"></span>
+                        </div>
+                        <div class="cost-year-3">
+                            <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 3</label>
+                            <input type="number" id="marketingCostY3" value="8000" oninput="updateAnnualCostDisplays()">
+                            <span class="annual-cost-display" id="marketingCostY3_annual"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📊 Investment Parameters</h2>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="input-group">
+                    <label>Seed Investment (£)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Initial funding amount. UK seed rounds typically range from £150k-500k.</span>
+                    </label>
+                    <input type="number" id="seedInvestment" value="200000" min="50000" max="1000000" step="10000">
+                </div>
+                
+                <div class="input-group">
+                    <label>Equity Offered (%)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Percentage of company ownership given to investors. Seed rounds typically take 10-20%.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="equityOffered" value="12" min="1" max="30" step="0.5" oninput="updateSliderValue(this)">
+                        <span class="range-value">12%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Exit Valuation Multiple
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Revenue multiple for exit valuation. SaaS companies typically sell for 4-8x ARR.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="valuationMultiple" value="5.5" min="2" max="12" step="0.5" oninput="updateSliderValue(this)">
+                        <span class="range-value">5.5x</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🎯 Quick Scenarios</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <button class="calculate-btn scenario-btn" onclick="loadScenario('conservative')">Conservative</button>
+                <button class="calculate-btn scenario-btn" onclick="loadScenario('realistic')">Realistic</button>
+                <button class="calculate-btn scenario-btn" onclick="loadScenario('optimistic')">Optimistic</button>
+                <button class="calculate-btn scenario-btn" onclick="loadScenario('investor')">Investor Ready</button>
+            </div>
+        </div>
+        
+        <button class="calculate-btn" onclick="calculateProjections()">Calculate Projections</button>
+        
+        <div class="output-section" id="outputSection" style="display: none;">
+            <h2>📊 Financial Projections</h2>
+            
+            <div class="export-buttons">
+                <button class="calculate-btn export-btn" onclick="exportToCSV()">Export to CSV</button>
+                <button class="calculate-btn export-btn" onclick="exportToPDF()">Export to PDF</button>
+            </div>
+            
+            <div class="card" id="parameters-summary-card" style="display:none;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Parameters Summary</h3>
+                <div id="parametersSummaryContent"></div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">Final MAU <span class="info-icon">?</span><span class="tooltip">Final Monthly Active Users at the end of the projection period.</span></div>
+                        <div class="summary-value" id="finalMAU">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Final ARR <span class="info-icon">?</span><span class="tooltip">Final Annual Recurring Revenue, a key metric for SaaS valuation.</span></div>
+                        <div class="summary-value" id="finalARR">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Break-even Month <span class="info-icon">?</span><span class="tooltip">The month in which your cumulative revenue surpasses cumulative costs.</span></div>
+                        <div class="summary-value" id="breakEvenMonth">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Exit Valuation <span class="info-icon">?</span><span class="tooltip">An estimated valuation of the company at the end of the projection, based on the final ARR and a valuation multiple.</span></div>
+                        <div class="summary-value" id="exitValuation">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Investor Return <span class="info-icon">?</span><span class="tooltip">The potential return for an investor based on their initial investment and equity stake at the exit valuation.</span></div>
+                        <div class="summary-value" id="investorReturn">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Revenue <span class="info-icon">?</span><span class="tooltip">The sum of all revenue generated over the entire projection period.</span></div>
+                    <div class="metric-value" id="totalRevenue">£0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Total Costs <span class="info-icon">?</span><span class="tooltip">The sum of all team, tech, and marketing costs over the projection period.</span></div>
+                    <div class="metric-value negative" id="totalCosts">£0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Net Profit/Loss <span class="info-icon">?</span><span class="tooltip">The difference between total revenue and total costs, indicating overall profitability.</span></div>
+                    <div class="metric-value" id="netProfit">£0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">LTV:CAC Ratio <span class="info-icon">?</span><span class="tooltip">Customer Lifetime Value to Customer Acquisition Cost ratio. Healthy SaaS: 3-5:1, Great: 5-10:1. Includes marketing + 15% sales overhead.</span></div>
+                    <div class="metric-value positive" id="ltvCacRatio">0:1</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Customer LTV <span class="info-icon">?</span><span class="tooltip">Average lifetime value per customer, accounting for churn improvement and pricing tiers.</span></div>
+                    <div class="metric-value positive" id="customerLTV">£0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Customer CAC <span class="info-icon">?</span><span class="tooltip">Customer Acquisition Cost including marketing spend and sales overhead (15% of total costs).</span></div>
+                    <div class="metric-value" id="customerCAC">£0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Runway (Months) <span class="info-icon">?</span><span class="tooltip">The number of months the company can operate before running out of money, based on current cash balance and burn rate.</span></div>
+                    <div class="metric-value" id="runway">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Current Burn Rate <span class="info-icon">?</span><span class="tooltip">The rate at which the company is losing money. 'Profitable' if net income is positive.</span></div>
+                    <div class="metric-value" id="burnRate">£0</div>
+                </div>
+            </div>
+            
+            <div class="cost-breakdown">
+                <h3>Cost Structure Breakdown</h3>
+                <div id="costBreakdownContent"></div>
+            </div>
+            
+            <div class="cost-breakdown">
+                <h3>Customer Acquisition Cost (CAC) Breakdown</h3>
+                <div id="cacBreakdownContent">
+                    <div class="cost-item">
+                        <span class="cost-label">Total Marketing Costs</span>
+                        <span class="cost-value" id="totalMarketingCosts">£0</span>
+                    </div>
+                    <div class="cost-item">
+                        <span class="cost-label">Sales Overhead (20% of total costs)</span>
+                        <span class="cost-value" id="salesOverhead">£0</span>
+                    </div>
+                    <div class="cost-item" style="border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                        <span class="cost-label">Total Acquisition Costs</span>
+                        <span class="cost-value" id="totalAcquisitionCosts">£0</span>
+                    </div>
+                    <div class="cost-item">
+                        <span class="cost-label">Total Premium Users Acquired</span>
+                        <span class="cost-value" id="totalUsersAcquiredDisplay">0</span>
+                    </div>
+                    <div class="cost-item" style="border-top: 2px solid #667eea; margin-top: 10px; padding-top: 10px; font-weight: bold; color: #667eea;">
+                        <span class="cost-label">Average CAC per User</span>
+                        <span class="cost-value" id="averageCACDisplay">£0</span>
+                    </div>
+                    <div class="cost-item" style="color: #999; font-size: 0.9rem; margin-top: 10px;">
+                        <span class="cost-label">Payback Period (CAC ÷ Monthly ARPU)</span>
+                        <span class="cost-value" id="paybackPeriod">0 months</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="advanced-analytics" id="advancedAnalytics" style="display: none;">
+                <h3>Advanced Analytics</h3>
+                
+                <div id="tieredRevenueAnalysis" class="analytics-section" style="display: none;">
+                    <h4>Revenue by Tier</h4>
+                    <div id="tieredRevenueContent"></div>
+                </div>
+                
+                <div id="cohortAnalysis" class="analytics-section" style="display: none;">
+                    <h4>Cohort Analysis</h4>
+                    <div id="cohortAnalysisContent"></div>
+                </div>
+                
+                <div id="variableCostAnalysis" class="analytics-section" style="display: none;">
+                    <h4>Variable Cost Analysis</h4>
+                    <div id="variableCostContent"></div>
+                </div>
+                
+                <div id="fundingRoundsAnalysis" class="analytics-section" style="display: none;">
+                    <h4>Funding Rounds & Dilution</h4>
+                    <div id="fundingRoundsContent"></div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+            
+            <h3 style="margin-top: 30px; margin-bottom: 20px;">Monthly Breakdown</h3>
+            <div style="overflow-x: auto;">
+                <table id="monthlyTable">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>MAU</th>
+                            <th>Growth Rate</th>
+                            <th>Premium Users</th>
+                            <th>Conversion Rate</th>
+                            <th>Monthly Revenue</th>
+                            <th>Cumulative ARR</th>
+                            <th>Team Costs</th>
+                            <th>Tech Costs</th>
+                            <th>Marketing Costs</th>
+                            <th>Variable Costs</th>
+                            <th>Total Costs</th>
+                            <th>Net Income</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

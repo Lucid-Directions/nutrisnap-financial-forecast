@@ -1,0 +1,581 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0a0a0a;
+    color: #ffffff;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 1024px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    border-color: #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
+}
+
+.card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #999;
+    font-size: 0.9rem;
+    font-weight: 500;
+    position: relative;
+}
+
+.tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: normal;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1000;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 5px;
+    max-width: 250px;
+    white-space: normal;
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 20px;
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+.input-group label:hover .tooltip {
+    opacity: 1;
+}
+
+.info-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background: #667eea;
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 14px;
+    font-size: 10px;
+    margin-left: 5px;
+    cursor: help;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="number"], input[type="range"], select {
+    width: 100%;
+    padding: 12px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input[type="range"] {
+    padding: 0;
+    height: 8px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.range-value {
+    min-width: 60px;
+    text-align: right;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.output-section {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.metric-card {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: #667eea;
+}
+
+.metric-label {
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.metric-value.positive {
+    color: #4ade80;
+}
+
+.metric-value.negative {
+    color: #f87171;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+}
+
+th {
+    background: #0a0a0a;
+    color: #667eea;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+tr.year-highlight {
+    background: rgba(102, 126, 234, 0.2);
+    font-weight: 600;
+}
+
+td.positive {
+    color: #4ade80;
+}
+
+td.negative {
+    color: #f87171;
+}
+
+.chart-container {
+    margin-top: 30px;
+    height: 400px;
+    position: relative;
+}
+
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.calculate-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.calculate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.scenario-btn {
+    background: #333;
+    padding: 10px;
+    margin-top: 0;
+}
+
+.export-btn {
+    background: #333;
+    padding: 10px 20px;
+    margin-top: 0;
+    width: auto;
+    font-size: 0.9rem;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.cost-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .cost-inputs {
+        grid-template-columns: 1fr;
+    }
+}
+
+.summary-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-label {
+    color: #999;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    position: relative;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.cost-breakdown {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.cost-breakdown h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #222;
+}
+
+.cost-label {
+    color: #999;
+}
+
+.cost-value {
+    color: #fff;
+    font-weight: 600;
+}
+
+#parametersSummaryContent {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+#parametersSummaryContent .param-group {
+    background: #0a0a0a;
+    padding: 15px;
+    border-radius: 8px;
+}
+#parametersSummaryContent .param-group h4 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+#parametersSummaryContent .param-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    padding: 4px 0;
+}
+#parametersSummaryContent .param-label {
+    color: #999;
+}
+#parametersSummaryContent .param-value {
+    color: #fff;
+    font-weight: 600;
+}
+
+.annual-cost-display {
+    display: block;
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 5px;
+}
+
+#monthlyTable tbody tr td:first-child {
+    white-space: nowrap;
+}
+
+@media print {
+    .card, .metric-card, .chart-container, #monthlyTable tr {
+        page-break-inside: avoid;
+    }
+
+    h1, h2, h3, h4 {
+        page-break-after: avoid;
+    }
+
+    .output-section {
+        border: none;
+        box-shadow: none;
+    }
+}
+
+.summary-label:hover .tooltip,
+.metric-label:hover .tooltip {
+    opacity: 1;
+}
+
+/* Advanced Features Styling */
+.tier-input {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+.tier-input h4 {
+    color: #667eea;
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+}
+
+.funding-round {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+.funding-round h4 {
+    color: #4ade80;
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+}
+
+.analytics-section {
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+}
+
+.analytics-section h4 {
+    color: #667eea;
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+}
+
+.tier-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.tier-card {
+    background: #222;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #333;
+}
+
+.tier-card h5 {
+    color: #667eea;
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+}
+
+.cohort-table {
+    width: 100%;
+    margin-top: 15px;
+}
+
+.cohort-table th,
+.cohort-table td {
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.cohort-table th {
+    background: #222;
+    color: #667eea;
+}
+
+.variable-cost-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #333;
+}
+
+.funding-round-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #222;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border: 1px solid #333;
+}
+
+.funding-round-item .round-name {
+    color: #4ade80;
+    font-weight: bold;
+}
+
+.funding-round-item .round-details {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.dilution-tracker {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-top: 15px;
+}
+
+.dilution-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #333;
+}
+
+.dilution-item:last-child {
+    border-bottom: none;
+} 
