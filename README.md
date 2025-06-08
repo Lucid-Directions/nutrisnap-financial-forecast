@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NutriSnap Financial Forecast Calculator
 
 A comprehensive SaaS financial modeling tool designed for startups and growing businesses to create detailed financial projections, analyze scenarios, and plan for fundraising.
@@ -210,3 +211,7 @@ For questions, feature requests, or bug reports, please ensure all financial ass
 **Status**: Production Ready ✅
 
 **Financial Model Validation**: All formulas thoroughly reviewed and accurate ✅ 
+=======
+# nutrisnap-financial-forecast
+nutrisnap-financial-forecast
+>>>>>>> 87bb2bd557254fc270dab7cf7afad6402b87714e
