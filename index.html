@@ -67,9 +67,9 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Starting MAU
+                    <label>MAU at Month 1 App Launch
                         <span class="info-icon">?</span>
-                        <span class="tooltip">Monthly Active Users at launch. Your initial user base to start projections from.</span>
+                        <span class="tooltip">Monthly Active Users when the app launches in Month 1. The beta development period (3 phases of Month 0) uses separate controls below.</span>
                     </label>
                     <input type="number" id="startingMAU" value="200" min="50" max="1000" step="50">
                 </div>
@@ -90,7 +90,10 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Year 2 MAU Growth (%/month)</label>
+                    <label>Year 2 MAU Growth (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected MAU growth in Year 2. Growth typically slows as the user base expands.</span>
+                    </label>
                     <div class="input-wrapper">
                         <input type="range" id="year2Growth" value="12" min="5" max="25" step="1" oninput="updateSliderValue(this)">
                         <span class="range-value">12%</span>
@@ -98,7 +101,10 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Year 3 MAU Growth (%/month)</label>
+                    <label>Year 3 MAU Growth (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected MAU growth in Year 3. Growth continues to stabilize as the market matures.</span>
+                    </label>
                     <div class="input-wrapper">
                         <input type="range" id="year3Growth" value="9" min="3" max="20" step="1" oninput="updateSliderValue(this)">
                         <span class="range-value">9%</span>
@@ -106,7 +112,10 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Year 4 MAU Growth (%/month)</label>
+                    <label>Year 4 MAU Growth (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected MAU growth in Year 4, reflecting a more mature product stage.</span>
+                    </label>
                     <div class="input-wrapper">
                         <input type="range" id="year4Growth" value="7" min="2" max="15" step="1" oninput="updateSliderValue(this)">
                         <span class="range-value">7%</span>
@@ -114,10 +123,103 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Year 5 MAU Growth (%/month)</label>
+                    <label>Year 5 MAU Growth (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Expected MAU growth in Year 5, representing long-term sustainable growth.</span>
+                    </label>
                     <div class="input-wrapper">
                         <input type="range" id="year5Growth" value="5" min="1" max="12" step="1" oninput="updateSliderValue(this)">
                         <span class="range-value">5%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🚀 Beta Development Period (Months 0-2)</h2>
+                <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #667eea;">
+                    <div style="color: #667eea; font-weight: bold; margin-bottom: 10px;">📅 Development Timeline:</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                        <div style="background: #0a0a0a; padding: 8px; border-radius: 4px;">
+                            <strong style="color: #4ade80; font-size: 0.85rem;">Month 0</strong><br>
+                            <span style="color: #ccc; font-size: 0.75rem;">Initial dev & first beta</span>
+                        </div>
+                        <div style="background: #0a0a0a; padding: 8px; border-radius: 4px;">
+                            <strong style="color: #f59e0b; font-size: 0.85rem;">Month 1</strong><br>
+                            <span style="color: #ccc; font-size: 0.75rem;">Expanded beta testing</span>
+                        </div>
+                        <div style="background: #0a0a0a; padding: 8px; border-radius: 4px;">
+                            <strong style="color: #ef4444; font-size: 0.85rem;">Month 2</strong><br>
+                            <span style="color: #ccc; font-size: 0.75rem;">Launch preparation</span>
+                        </div>
+                        <div style="background: #0a0a0a; padding: 8px; border-radius: 4px;">
+                            <strong style="color: #667eea; font-size: 0.85rem;">Month 1</strong><br>
+                            <span style="color: #ccc; font-size: 0.75rem;">🎯 App launch!</span>
+                        </div>
+                    </div>
+                    <div style="background: #0d1117; padding: 8px; border-radius: 4px; margin-top: 12px; font-size: 0.8rem; color: #999;">
+                        <strong style="color: #667eea;">Note:</strong> During development (3 x Month 0), only free beta users exist. Paid conversions begin in Month 1.
+                    </div>
+                </div>
+                
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #0a0a0a; padding: 15px; border-radius: 8px; border-left: 3px solid #4ade80;">
+                        <h4 style="color: #4ade80; margin-bottom: 12px;">Month 0 - Initial Development</h4>
+                        <div class="input-group">
+                            <label>Beta Users</label>
+                            <input type="number" id="betaUsersM0" value="50" min="10" max="500" step="10" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Team Costs (£/month)</label>
+                            <input type="number" id="betaTeamCostM0" value="8000" min="1000" max="50000" step="500" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Tech Costs (£/month)</label>
+                            <input type="number" id="betaTechCostM0" value="300" min="50" max="5000" step="50" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Marketing Costs (£/month)</label>
+                            <input type="number" id="betaMarketingCostM0" value="500" min="0" max="10000" step="100" onchange="calculateProjections()">
+                        </div>
+                    </div>
+                    
+                    <div style="background: #0a0a0a; padding: 15px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                        <h4 style="color: #f59e0b; margin-bottom: 12px;">Month 1 - Expanded Beta</h4>
+                        <div class="input-group">
+                            <label>Beta Users</label>
+                            <input type="number" id="betaUsersM1" value="120" min="20" max="800" step="20" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Team Costs (£/month)</label>
+                            <input type="number" id="betaTeamCostM1" value="12000" min="1000" max="50000" step="500" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Tech Costs (£/month)</label>
+                            <input type="number" id="betaTechCostM1" value="400" min="50" max="5000" step="50" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Marketing Costs (£/month)</label>
+                            <input type="number" id="betaMarketingCostM1" value="800" min="0" max="10000" step="100" onchange="calculateProjections()">
+                        </div>
+                    </div>
+                    
+                    <div style="background: #0a0a0a; padding: 15px; border-radius: 8px; border-left: 3px solid #ef4444;">
+                        <h4 style="color: #ef4444; margin-bottom: 12px;">Month 2 - Launch Prep</h4>
+                        <div class="input-group">
+                            <label>Beta Users</label>
+                            <input type="number" id="betaUsersM2" value="200" min="50" max="1000" step="25" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Team Costs (£/month)</label>
+                            <input type="number" id="betaTeamCostM2" value="15000" min="1000" max="50000" step="500" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Tech Costs (£/month)</label>
+                            <input type="number" id="betaTechCostM2" value="600" min="50" max="5000" step="50" onchange="calculateProjections()">
+                        </div>
+                        <div class="input-group">
+                            <label>Marketing Costs (£/month)</label>
+                            <input type="number" id="betaMarketingCostM2" value="1200" min="0" max="10000" step="100" onchange="calculateProjections()">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -128,9 +230,9 @@
                 <h2>💰 Conversion & Retention</h2>
                 
                 <div class="input-group">
-                    <label>Initial Conversion Rate (%)
+                    <label>Free-to-Paid Conversion Rate (%)
                         <span class="info-icon">?</span>
-                        <span class="tooltip">Percentage of free users who convert to premium. Industry average is 2-5% for freemium SaaS.</span>
+                        <span class="tooltip">Percentage of FREE users who upgrade to paid tiers (BASIC/PRO). Industry average is 2-5% for freemium SaaS.</span>
                     </label>
                     <div class="input-wrapper">
                         <input type="range" id="initialConversion" value="6" min="2" max="20" step="0.5" oninput="updateSliderValue(this)">
@@ -150,12 +252,34 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Initial Monthly Churn Rate (%)
+                    <label>Free User Churn Rate (%/month)
                         <span class="info-icon">?</span>
-                        <span class="tooltip">Percentage of paying users who cancel each month. Good SaaS churn is 3-5% monthly.</span>
+                        <span class="tooltip">Percentage of free users lost each month. Free users typically have higher churn (5-10%) as they have less commitment.</span>
                     </label>
                     <div class="input-wrapper">
-                        <input type="range" id="churnRate" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this)">
+                        <input type="range" id="freeChurnRate" value="6" min="2" max="15" step="0.5" oninput="updateSliderValue(this); calculateProjections();">
+                        <span class="range-value">6%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Paid User Churn Rate (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Percentage of paid users lost each month. Paid users typically have lower churn (2-5%) due to higher commitment and value.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="paidChurnRate" value="3" min="1" max="10" step="0.5" oninput="updateSliderValue(this); calculateProjections();">
+                        <span class="range-value">3%</span>
+                    </div>
+                </div>
+                
+                <div class="input-group" style="opacity: 0.6;">
+                    <label>Legacy Churn Rate (%/month)
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Legacy unified churn rate - now using separate free/paid rates above for more accurate modeling.</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="range" id="churnRate" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this)" disabled>
                         <span class="range-value">5%</span>
                     </div>
                 </div>
@@ -197,48 +321,114 @@
                 <h2>💎 Advanced Pricing Models</h2>
                 
                 <div class="input-group">
-                    <label>Enable Tiered Pricing
+                    <label>Enable Freemium Tiered Pricing
                         <span class="info-icon">?</span>
-                        <span class="tooltip">Enable multiple subscription tiers (Basic, Pro, Enterprise) with different pricing and conversion rates.</span>
+                        <span class="tooltip">Model your freemium business with FREE tier (calorie counting), BASIC tier (glucose prediction, journal), and PRO tier (CGM integration).</span>
                     </label>
                     <input type="checkbox" id="enableTieredPricing" onchange="toggleTieredPricing()">
                 </div>
                 
                 <div id="tieredPricingSection" style="display: none;">
-                    <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                        <div class="tier-input">
-                            <h4>Basic Tier</h4>
+                    <!-- Freemium Model Overview -->
+                    <div class="input-group" style="margin-bottom: 20px; padding: 15px; background: #0a0a0a; border-radius: 8px;">
+                        <label style="color: #667eea; font-weight: bold; margin-bottom: 15px; display: block;">📱 NutriSnap Freemium Model</label>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px;">
+                            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border-left: 3px solid #4ade80;">
+                                <strong style="color: #4ade80; font-size: 0.9rem;">FREE TIER</strong><br>
+                                <span style="color: #ccc; font-size: 0.8rem;">• Calorie counting<br>• Basic nutrition values</span>
+                            </div>
+                            
+                            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border-left: 3px solid #667eea;">
+                                <strong style="color: #667eea; font-size: 0.9rem;">BASIC TIER</strong><br>
+                                <span style="color: #ccc; font-size: 0.8rem;">• Glucose prediction<br>• Journal tracking<br>• Stats viewing</span>
+                            </div>
+                            
+                            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                                <strong style="color: #f59e0b; font-size: 0.9rem;">PRO TIER</strong><br>
+                                <span style="color: #ccc; font-size: 0.8rem;">• CGM integration<br>• Real-time data<br>• Advanced analytics</span>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #1e1e1e; padding: 10px; border-radius: 4px; font-size: 0.85rem; color: #999; border-left: 3px solid #667eea;">
+                            <strong style="color: #667eea;">Note:</strong> Your "conversion rate" represents FREE users converting to paid tiers. All MAU start as FREE users.
+                        </div>
+                    </div>
+                    
+                    <!-- Tier Selection Controls -->
+                    <div class="input-group" style="margin-bottom: 20px; padding: 15px; background: #0a0a0a; border-radius: 8px;">
+                        <label style="color: #667eea; font-weight: 600; margin-bottom: 10px; display: block;">Active Paid Tiers
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Select which premium tiers to include in your financial model. The Basic Tier is required.</span>
+                        </label>
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 5px; color: #999;">
+                                <input type="checkbox" id="enableBasicTier" checked disabled style="opacity: 0.6;">
+                                Basic Tier (Always Required)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; color: #999;">
+                                <input type="checkbox" id="enableProTier" checked onchange="toggleTierVisibility('pro'); calculateProjections();">
+                                Pro Tier
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; color: #999;">
+                                <input type="checkbox" id="enableEnterpriseTier" onchange="toggleTierVisibility('enterprise'); calculateProjections();">
+                                Enterprise Tier
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid" id="tiersGrid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="tier-input" id="basicTierSection">
+                            <h4>Basic Tier <span style="color: #4ade80; font-size: 0.8rem;">(Required)</span></h4>
                             <div class="input-group">
-                                <label>Monthly Price (£)</label>
-                                <input type="number" id="basicPrice" value="5" min="1" max="20" step="0.5">
+                                <label>Monthly Price (£)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Set the monthly price for your entry-level paid tier.</span>
+                                </label>
+                                <input type="number" id="basicPrice" value="5" min="1" max="20" step="0.5" oninput="calculateProjections()">
                             </div>
                             <div class="input-group">
-                                <label>Conversion Rate (%)</label>
-                                <input type="range" id="basicConversion" value="8" min="2" max="15" step="0.5" oninput="updateSliderValue(this)">
+                                <label>Conversion Rate (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Percentage of total MAU that converts to this specific tier each month.</span>
+                                </label>
+                                <input type="range" id="basicConversion" value="8" min="2" max="15" step="0.5" oninput="updateSliderValue(this); calculateProjections();">
                                 <span class="range-value">8%</span>
                             </div>
                         </div>
-                        <div class="tier-input">
+                        <div class="tier-input" id="proTierSection">
                             <h4>Pro Tier</h4>
                             <div class="input-group">
-                                <label>Monthly Price (£)</label>
-                                <input type="number" id="proPrice" value="15" min="10" max="50" step="1">
+                                <label>Monthly Price (£)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Set the monthly price for your mid-level paid tier.</span>
+                                </label>
+                                <input type="number" id="proPrice" value="15" min="10" max="50" step="1" oninput="calculateProjections()">
                             </div>
                             <div class="input-group">
-                                <label>Conversion Rate (%)</label>
-                                <input type="range" id="proConversion" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this)">
+                                <label>Conversion Rate (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Percentage of total MAU that converts to this specific tier each month.</span>
+                                </label>
+                                <input type="range" id="proConversion" value="5" min="1" max="10" step="0.5" oninput="updateSliderValue(this); calculateProjections();">
                                 <span class="range-value">5%</span>
                             </div>
                         </div>
-                        <div class="tier-input">
+                        <div class="tier-input" id="enterpriseTierSection" style="display: none;">
                             <h4>Enterprise Tier</h4>
                             <div class="input-group">
-                                <label>Monthly Price (£)</label>
-                                <input type="number" id="enterprisePrice" value="50" min="30" max="200" step="5">
+                                <label>Monthly Price (£)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Set the monthly price for your highest-level paid tier.</span>
+                                </label>
+                                <input type="number" id="enterprisePrice" value="50" min="30" max="200" step="5" oninput="calculateProjections()">
                             </div>
                             <div class="input-group">
-                                <label>Conversion Rate (%)</label>
-                                <input type="range" id="enterpriseConversion" value="2" min="0.5" max="5" step="0.25" oninput="updateSliderValue(this)">
+                                <label>Conversion Rate (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Percentage of total MAU that converts to this specific tier each month.</span>
+                                </label>
+                                <input type="range" id="enterpriseConversion" value="2" min="0.5" max="5" step="0.25" oninput="updateSliderValue(this); calculateProjections();">
                                 <span class="range-value">2%</span>
                             </div>
                         </div>
@@ -263,7 +453,7 @@
                     <div class="input-group">
                         <label>Retention Rate Decay (%/month)
                             <span class="info-icon">?</span>
-                            <span class="tooltip">How much retention decreases each month for new cohorts (seasonal effects).</span>
+                            <span class="tooltip">The rate at which retention worsens for newer cohorts. A value of 0.5% means each new monthly cohort's churn will be 0.5% higher than the previous one, modeling potential market saturation or lower-quality user acquisition over time.</span>
                         </label>
                         <div class="input-wrapper">
                             <input type="range" id="retentionDecay" value="0.5" min="0" max="2" step="0.1" oninput="updateSliderValue(this)">
@@ -274,7 +464,7 @@
                     <div class="input-group">
                         <label>Cohort LTV Multiplier
                             <span class="info-icon">?</span>
-                            <span class="tooltip">LTV variation factor for different cohorts (1.0 = same, 1.2 = 20% higher for newer cohorts).</span>
+                            <span class="tooltip">A factor to model if the value of new users changes over time. A value of 1.1 means cohorts acquired a year from now are expected to be 10% more valuable, perhaps due to better monetization or product-market fit.</span>
                         </label>
                         <div class="input-wrapper">
                             <input type="range" id="cohortLtvMultiplier" value="1.1" min="0.8" max="1.5" step="0.1" oninput="updateSliderValue(this)">
@@ -285,8 +475,118 @@
             </div>
             
             <div class="card">
-                <h2>🔧 Advanced Cost Modeling</h2>
+                <h2>📊 Advanced Cost Management</h2>
                 
+                <!-- Cost Escalation Schedule -->
+                <div class="input-group">
+                    <label>Enable Cost Escalation Schedule
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Add specific month-by-month cost changes for hiring, scaling, or one-time expenses.</span>
+                    </label>
+                    <input type="checkbox" id="enableCostEscalation" onchange="toggleCostEscalation()">
+                </div>
+                
+                <div id="costEscalationSection" style="display: none;">
+                    <h4 style="color: #667eea; margin: 15px 0 10px 0;">📅 Cost Escalation Schedule</h4>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 10px;">
+                            <div>
+                                <label style="font-size: 0.85rem; color: #999;">Month</label>
+                                <input type="number" id="newEscalationMonth" placeholder="6" min="1" max="60" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #999;">Team Change (£)</label>
+                                <input type="number" id="newEscalationTeam" placeholder="+5000" step="100" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #999;">Tech Change (£)</label>
+                                <input type="number" id="newEscalationTech" placeholder="+500" step="50" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #999;">Marketing Change (£)</label>
+                                <input type="number" id="newEscalationMarketing" placeholder="+2000" step="100" style="width: 100%;">
+                            </div>
+                            <div>
+                                <button onclick="addCostEscalation()" style="background: #4ade80; color: #000; border: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; cursor: pointer;">Add</button>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #999; margin-bottom: 10px;">
+                            Add cost changes that occur at specific months (e.g., hiring new team members, scaling infrastructure)
+                        </div>
+                        <div id="escalationList" style="min-height: 20px;">
+                            <!-- Dynamic escalation items will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Marketing Campaign Phases -->
+                <div class="input-group">
+                    <label>Enable Marketing Campaign Phases
+                        <span class="info-icon">?</span>
+                        <span class="tooltip">Define marketing budget phases instead of fixed yearly amounts (Launch, Growth, Scale phases).</span>
+                    </label>
+                    <input type="checkbox" id="enableMarketingPhases" onchange="toggleMarketingPhases()">
+                </div>
+                
+                <div id="marketingPhasesSection" style="display: none;">
+                    <h4 style="color: #667eea; margin: 15px 0 10px 0;">🎯 Marketing Campaign Phases</h4>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: #0a0a0a; padding: 12px; border-radius: 6px; border-left: 3px solid #4ade80;">
+                                <h5 style="color: #4ade80; margin: 0 0 8px 0;">Launch Phase</h5>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">Start Month</label>
+                                    <input type="number" id="launchPhaseStart" value="1" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">End Month</label>
+                                    <input type="number" id="launchPhaseEnd" value="6" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Monthly Budget (£)</label>
+                                    <input type="number" id="launchPhaseBudget" value="1500" min="0" step="100" onchange="updateMarketingPhases()">
+                                </div>
+                            </div>
+                            
+                            <div style="background: #0a0a0a; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                                <h5 style="color: #f59e0b; margin: 0 0 8px 0;">Growth Phase</h5>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">Start Month</label>
+                                    <input type="number" id="growthPhaseStart" value="7" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">End Month</label>
+                                    <input type="number" id="growthPhaseEnd" value="18" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Monthly Budget (£)</label>
+                                    <input type="number" id="growthPhaseBudget" value="3000" min="0" step="100" onchange="updateMarketingPhases()">
+                                </div>
+                            </div>
+                            
+                            <div style="background: #0a0a0a; padding: 12px; border-radius: 6px; border-left: 3px solid #667eea;">
+                                <h5 style="color: #667eea; margin: 0 0 8px 0;">Scale Phase</h5>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">Start Month</label>
+                                    <input type="number" id="scalePhaseStart" value="19" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem;">End Month</label>
+                                    <input type="number" id="scalePhaseEnd" value="60" min="1" max="60" onchange="updateMarketingPhases()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Monthly Budget (£)</label>
+                                    <input type="number" id="scalePhaseBudget" value="5000" min="0" step="100" onchange="updateMarketingPhases()">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: #999;">
+                            <strong>Note:</strong> When enabled, these phases override the yearly marketing costs from the baseline cost structure.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Original Variable Costs Section -->
                 <div class="input-group">
                     <label>Enable Variable Costs
                         <span class="info-icon">?</span>
@@ -315,7 +615,7 @@
                     <div class="input-group">
                         <label>Infrastructure Scaling Factor
                             <span class="info-icon">?</span>
-                            <span class="tooltip">How infrastructure costs scale with user growth (0.8 = economies of scale).</span>
+                            <span class="tooltip">How infrastructure costs scale with user growth (0.8 = economies of scale). Note: For ML-heavy apps like Pro tier features, costs may increase rather than decrease with scale.</span>
                         </label>
                         <div class="input-wrapper">
                             <input type="range" id="infraScaling" value="0.85" min="0.5" max="1.2" step="0.05" oninput="updateSliderValue(this)">
@@ -342,15 +642,24 @@
                     <div class="funding-round">
                         <h4>Series A</h4>
                         <div class="input-group">
-                            <label>Funding Month</label>
+                            <label>Funding Month
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The projection month in which the Series A funding is received.</span>
+                            </label>
                             <input type="number" id="seriesAMonth" value="18" min="12" max="60" step="1">
                         </div>
                         <div class="input-group">
-                            <label>Amount (£)</label>
+                            <label>Amount (£)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The total amount of capital raised in this funding round.</span>
+                            </label>
                             <input type="number" id="seriesAAmount" value="1000000" min="500000" max="10000000" step="100000">
                         </div>
                         <div class="input-group">
-                            <label>Equity (%)</label>
+                            <label>Equity (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The percentage of company equity sold to investors in this round.</span>
+                            </label>
                             <input type="range" id="seriesAEquity" value="20" min="10" max="40" step="1" oninput="updateSliderValue(this)">
                             <span class="range-value">20%</span>
                         </div>
@@ -358,15 +667,24 @@
                     <div class="funding-round">
                         <h4>Series B</h4>
                         <div class="input-group">
-                            <label>Funding Month</label>
+                            <label>Funding Month
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The projection month in which the Series B funding is received.</span>
+                            </label>
                             <input type="number" id="seriesBMonth" value="36" min="24" max="72" step="1">
                         </div>
                         <div class="input-group">
-                            <label>Amount (£)</label>
+                            <label>Amount (£)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The total amount of capital raised in this funding round.</span>
+                            </label>
                             <input type="number" id="seriesBAmount" value="5000000" min="2000000" max="50000000" step="500000">
                         </div>
                         <div class="input-group">
-                            <label>Equity (%)</label>
+                            <label>Equity (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The percentage of company equity sold to investors in this round.</span>
+                            </label>
                             <input type="range" id="seriesBEquity" value="15" min="8" max="30" step="1" oninput="updateSliderValue(this)">
                             <span class="range-value">15%</span>
                         </div>
@@ -374,15 +692,24 @@
                     <div class="funding-round">
                         <h4>Series C</h4>
                         <div class="input-group">
-                            <label>Funding Month</label>
+                            <label>Funding Month
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The projection month in which the Series C funding is received.</span>
+                            </label>
                             <input type="number" id="seriesCMonth" value="54" min="36" max="84" step="1">
                         </div>
                         <div class="input-group">
-                            <label>Amount (£)</label>
+                            <label>Amount (£)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The total amount of capital raised in this funding round.</span>
+                            </label>
                             <input type="number" id="seriesCAmount" value="15000000" min="5000000" max="100000000" step="1000000">
                         </div>
                         <div class="input-group">
-                            <label>Equity (%)</label>
+                            <label>Equity (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The percentage of company equity sold to investors in this round.</span>
+                            </label>
                             <input type="range" id="seriesCEquity" value="12" min="5" max="25" step="1" oninput="updateSliderValue(this)">
                             <span class="range-value">12%</span>
                         </div>
@@ -396,7 +723,8 @@
                 <h2>💼 Cost Structure</h2>
                 
                 <div class="input-group">
-                    <label>Monthly Team Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for your team (salaries, benefits, etc.) for each year. The annual cost will be calculated automatically.</span></label>
+                    <label>Monthly Team Costs (£)
+                        <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for your team (salaries, benefits, etc.) for each year. The annual cost will be calculated automatically.</span></label>
                     <div class="cost-inputs">
                         <div class="cost-year-1">
                             <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
@@ -417,7 +745,8 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Monthly Tech Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for technology (servers, software, etc.) for each year. The annual cost will be calculated automatically.</span></label>
+                    <label>Monthly Tech Costs (£)
+                        <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for technology (servers, software, etc.) for each year. The annual cost will be calculated automatically.</span></label>
                     <div class="cost-inputs">
                         <div class="cost-year-1">
                             <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
@@ -438,7 +767,8 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>Monthly Marketing Costs (£) <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for marketing and advertising for each year. The annual cost will be calculated automatically.</span></label>
+                    <label>Monthly Marketing Costs (£)
+                        <span class="info-icon">?</span><span class="tooltip">Enter the estimated monthly cost for marketing and advertising for each year. The annual cost will be calculated automatically.</span></label>
                     <div class="cost-inputs">
                         <div class="cost-year-1">
                             <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Year 1</label>
@@ -505,14 +835,51 @@
             </div>
         </div>
         
+        <div class="card">
+            <h2>💾 Save & Load Projections</h2>
+            
+            <!-- Save Section -->
+            <div class="input-group">
+                <label>Save Current Configuration</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="saveProjectionName" placeholder="Enter projection name..." style="flex: 1; padding: 8px; font-size: 0.9rem; border: 1px solid #333; border-radius: 4px; background: #1a1a1a; color: #fff;">
+                    <button class="calculate-btn small-btn" onclick="saveCurrentProjection()" style="min-width: 80px;">Save</button>
+                </div>
+            </div>
+            
+            <!-- Load Section -->
+            <div class="input-group">
+                <label>Saved Projections</label>
+                <div id="savedProjectionsList" style="display: grid; gap: 8px;">
+                    <div style="text-align: center; color: #999; padding: 20px; font-style: italic;" id="noSavedProjections">
+                        No saved projections yet. Save your current configuration above.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <button class="calculate-btn small-btn" onclick="exportSavedProjections()" style="background: #4ade80;">Export All</button>
+                <button class="calculate-btn small-btn" onclick="clearAllProjections()" style="background: #f87171;">Clear All</button>
+            </div>
+        </div>
+        
         <button class="calculate-btn" onclick="calculateProjections()">Calculate Projections</button>
         
         <div class="output-section" id="outputSection" style="display: none;">
             <h2>📊 Financial Projections</h2>
             
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 3px solid #667eea;">
+                <strong style="color: #667eea;">📅 Development & Launch Timeline:</strong> 
+                <span style="color: #ccc; font-size: 0.9rem;">
+                    Three development phases (all labeled Month 0), then app launch begins Month 1. Beta users only during development (free tier), no paid conversions. Sales and growth start from Month 1.
+                </span>
+            </div>
+            
             <div class="export-buttons">
                 <button class="calculate-btn export-btn" onclick="exportToCSV()">Export to CSV</button>
                 <button class="calculate-btn export-btn" onclick="exportToPDF()">Export to PDF</button>
+                <button class="calculate-btn export-btn" onclick="takeScreenshot()">📷 Screenshot</button>
             </div>
             
             <div class="card" id="parameters-summary-card" style="display:none;">
@@ -523,8 +890,12 @@
             <div class="summary-card">
                 <div class="summary-grid">
                     <div class="summary-item">
-                        <div class="summary-label">Final MAU <span class="info-icon">?</span><span class="tooltip">Final Monthly Active Users at the end of the projection period.</span></div>
+                        <div class="summary-label">Final MAU <span class="info-icon">?</span><span class="tooltip">Final Monthly Active Users at the end of the projection period (includes both FREE and paid users).</span></div>
                         <div class="summary-value" id="finalMAU">-</div>
+                    </div>
+                    <div class="summary-item" id="freeUsersBreakdown" style="display: none;">
+                        <div class="summary-label">Free vs Paid Users <span class="info-icon">?</span><span class="tooltip">Breakdown of FREE tier users vs paid tier users in your freemium model.</span></div>
+                        <div class="summary-value" id="freeVsPaid">-</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">Final ARR <span class="info-icon">?</span><span class="tooltip">Final Annual Recurring Revenue, a key metric for SaaS valuation.</span></div>
@@ -567,6 +938,10 @@
                     <div class="metric-value positive" id="customerLTV">£0</div>
                 </div>
                 <div class="metric-card">
+                    <div class="metric-label">Monthly ARPU <span class="info-icon">?</span><span class="tooltip">Average Revenue Per User - the blended monthly revenue per paying customer across all tiers.</span></div>
+                    <div class="metric-value positive" id="monthlyARPU">£0</div>
+                </div>
+                <div class="metric-card">
                     <div class="metric-label">Customer CAC <span class="info-icon">?</span><span class="tooltip">Customer Acquisition Cost including marketing spend and sales overhead (15% of total costs).</span></div>
                     <div class="metric-value" id="customerCAC">£0</div>
                 </div>
@@ -589,27 +964,45 @@
                 <h3>Customer Acquisition Cost (CAC) Breakdown</h3>
                 <div id="cacBreakdownContent">
                     <div class="cost-item">
-                        <span class="cost-label">Total Marketing Costs</span>
+                        <span class="cost-label">Total Marketing Costs
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">The sum of all direct marketing costs over the entire projection period.</span>
+                        </span>
                         <span class="cost-value" id="totalMarketingCosts">£0</span>
                     </div>
                     <div class="cost-item">
-                        <span class="cost-label">Sales Overhead (20% of total costs)</span>
+                        <span class="cost-label">Sales Overhead (20% of total costs)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">An estimated overhead for sales-related activities, calculated as a percentage of total operational costs.</span>
+                        </span>
                         <span class="cost-value" id="salesOverhead">£0</span>
                     </div>
                     <div class="cost-item" style="border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                        <span class="cost-label">Total Acquisition Costs</span>
+                        <span class="cost-label">Total Acquisition Costs
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">The total amount spent to acquire new customers, including both direct marketing and sales overhead.</span>
+                        </span>
                         <span class="cost-value" id="totalAcquisitionCosts">£0</span>
                     </div>
                     <div class="cost-item">
-                        <span class="cost-label">Total Premium Users Acquired</span>
+                        <span class="cost-label">Total Premium Users Acquired
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">The total number of new paying users acquired over the projection period. This is the denominator for the CAC calculation.</span>
+                        </span>
                         <span class="cost-value" id="totalUsersAcquiredDisplay">0</span>
                     </div>
                     <div class="cost-item" style="border-top: 2px solid #667eea; margin-top: 10px; padding-top: 10px; font-weight: bold; color: #667eea;">
-                        <span class="cost-label">Average CAC per User</span>
+                        <span class="cost-label">Average CAC per User
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">The average cost to acquire a single new paying customer (Total Acquisition Costs / Total Premium Users Acquired).</span>
+                        </span>
                         <span class="cost-value" id="averageCACDisplay">£0</span>
                     </div>
                     <div class="cost-item" style="color: #999; font-size: 0.9rem; margin-top: 10px;">
-                        <span class="cost-label">Payback Period (CAC ÷ Monthly ARPU)</span>
+                        <span class="cost-label">Payback Period (CAC ÷ Monthly ARPU)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">The number of months it takes to earn back the cost of acquiring a customer from the revenue they generate. A shorter payback period is better.</span>
+                        </span>
                         <span class="cost-value" id="paybackPeriod">0 months</span>
                     </div>
                 </div>
@@ -637,6 +1030,18 @@
                     <h4>Funding Rounds & Dilution</h4>
                     <div id="fundingRoundsContent"></div>
                 </div>
+                
+                <div id="sensitivityAnalysis" class="analytics-section">
+                    <h4>Sensitivity Analysis</h4>
+                    <div id="sensitivityContent">
+                        <div style="margin-bottom: 15px; color: #999; font-size: 0.9rem;">
+                            Shows how ±20% changes in key variables affect your projections.
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">This analysis helps you understand the robustness of your business model by showing how sensitive your key metrics (like LTV:CAC and Net Profit) are to changes in your core assumptions for churn, conversion, and customer acquisition cost.</span>
+                        </div>
+                        <div id="sensitivityAnalysisContent"></div>
+                    </div>
+                </div>
             </div>
             
             <div class="chart-container">
@@ -649,9 +1054,12 @@
                     <thead>
                         <tr>
                             <th>Month</th>
-                            <th>MAU</th>
+                            <th>Total MAU</th>
                             <th>Growth Rate</th>
-                            <th>Premium Users</th>
+                            <th>Free Users</th>
+                            <th>Basic Users</th>
+                            <th>Pro Users</th>
+                            <th id="enterpriseHeader" style="display: none;">Enterprise Users</th>
                             <th>Conversion Rate</th>
                             <th>Monthly Revenue</th>
                             <th>Cumulative ARR</th>
@@ -670,9 +1078,28 @@
         </div>
     </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- HTML2Canvas for screenshot functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        // Ensure libraries load before main script
+        window.addEventListener('load', function() {
+            console.log('Page loaded');
+            console.log('jsPDF available:', typeof window.jspdf);
+            if (window.jspdf && window.jspdf.jsPDF) {
+                console.log('jsPDF constructor available:', typeof window.jspdf.jsPDF);
+            }
+            if (typeof jsPDFAutoTable !== 'undefined') {
+                console.log('AutoTable plugin loaded:', typeof jsPDFAutoTable);
+            }
+        });
+    </script>
     <script src="script.js"></script>
 </body>
 </html> 

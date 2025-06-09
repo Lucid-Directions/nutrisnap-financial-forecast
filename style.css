@@ -278,6 +278,81 @@ td.negative {
     position: relative;
 }
 
+/* Saved Projections Styles */
+.saved-projection-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.saved-projection-item:hover {
+    border-color: #667eea;
+    background: #252525;
+}
+
+.saved-projection-info {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.saved-projection-name {
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.saved-projection-details {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.saved-projection-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.saved-projection-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 50px;
+}
+
+.load-btn {
+    background: #667eea;
+    color: white;
+}
+
+.load-btn:hover {
+    background: #5a6fd8;
+}
+
+.delete-btn {
+    background: #f87171;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: #ef4444;
+}
+
+.rename-btn {
+    background: #4ade80;
+    color: white;
+}
+
+.rename-btn:hover {
+    background: #22c55e;
+}
+
 canvas {
     width: 100% !important;
     height: 100% !important;
@@ -314,6 +389,12 @@ canvas {
     margin-top: 0;
     width: auto;
     font-size: 0.9rem;
+}
+
+.small-btn {
+    padding: 8px 15px;
+    font-size: 0.85rem;
+    margin-top: 0;
 }
 
 .export-buttons {
@@ -388,6 +469,39 @@ canvas {
 
 .cost-label {
     color: #999;
+    position: relative;
+}
+
+.cost-label .tooltip {
+    opacity: 0;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.cost-label .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+.cost-label:hover .tooltip {
+    opacity: 1;
 }
 
 .cost-value {
