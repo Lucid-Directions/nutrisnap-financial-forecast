@@ -2,6 +2,132 @@
 let revenueChart = null;
 let globalMonthlyData = [];
 let globalSummaryData = {};
+let costEscalations = [];
+let monthlyCustomCosts = {};
+let costManagementType = 'auto'; // 'auto' or 'manual'
+
+// Marketing strategy data
+const marketingStrategies = {
+    launch_blitz: {
+        name: 'Launch Blitz',
+        description: 'Aggressive spending to build initial awareness and user base',
+        multiplier: 1.5,
+        bestFor: 'Strong pre-launch validation, early adopter market'
+    },
+    gradual_ramp: {
+        name: 'Gradual Ramp-Up', 
+        description: 'Conservative start with steady budget increases',
+        multiplier: 0.8,
+        bestFor: 'Limited funding, organic growth focus'
+    },
+    consistent_burn: {
+        name: 'Consistent Burn',
+        description: 'Steady marketing spend throughout the phase',
+        multiplier: 1.0,
+        bestFor: 'Balanced approach, proven channels'
+    },
+    viral_focus: {
+        name: 'Viral Focus',
+        description: 'Lower paid spend, heavy investment in viral mechanics',
+        multiplier: 0.6,
+        bestFor: 'Product with strong viral potential'
+    },
+    event_driven: {
+        name: 'Event-Driven',
+        description: 'Concentrated spending around key events and launches',
+        multiplier: 1.3,
+        bestFor: 'Seasonal products, major feature releases'
+    },
+    performance_scale: {
+        name: 'Performance Scale',
+        description: 'Data-driven scaling of proven channels',
+        multiplier: 1.2,
+        bestFor: 'Validated CAC, strong unit economics'
+    },
+    channel_diversify: {
+        name: 'Channel Diversification',
+        description: 'Testing and expanding across multiple channels',
+        multiplier: 1.1,
+        bestFor: 'Reducing platform risk, expanding reach'
+    },
+    content_amplify: {
+        name: 'Content Amplification',
+        description: 'Heavy investment in content marketing and SEO',
+        multiplier: 0.9,
+        bestFor: 'B2B markets, long sales cycles'
+    },
+    partnership_focus: {
+        name: 'Partnership Focus',
+        description: 'Channel partnerships and integration marketing',
+        multiplier: 1.0,
+        bestFor: 'Platform businesses, B2B integration'
+    },
+    retention_acquisition: {
+        name: 'Retention + Acquisition',
+        description: 'Balanced spend on both new users and retention',
+        multiplier: 1.15,
+        bestFor: 'High churn concerns, LTV optimization'
+    },
+    market_domination: {
+        name: 'Market Domination',
+        description: 'Aggressive spending to capture market share',
+        multiplier: 1.6,
+        bestFor: 'Winner-take-all markets, strong funding'
+    },
+    efficiency_focus: {
+        name: 'Efficiency Focus',
+        description: 'Optimize for lowest CAC and highest ROAS',
+        multiplier: 0.8,
+        bestFor: 'Capital efficient growth, profitability focus'
+    },
+    brand_building: {
+        name: 'Brand Building',
+        description: 'Investment in long-term brand and awareness',
+        multiplier: 1.3,
+        bestFor: 'Consumer products, differentiation needed'
+    },
+    global_expansion: {
+        name: 'Global Expansion',
+        description: 'Geographic expansion and localization',
+        multiplier: 1.8,
+        bestFor: 'Proven local market, expansion ready'
+    },
+    lifecycle_optimization: {
+        name: 'Lifecycle Optimization',
+        description: 'Full-funnel optimization and automation',
+        multiplier: 1.1,
+        bestFor: 'Mature funnel, automation infrastructure'
+    }
+};
+
+// Marketing journey recommendations
+const marketingJourneys = {
+    launch_blitz: {
+        recommendedGrowth: 'performance_scale',
+        recommendedScale: 'market_domination',
+        rationale: 'Aggressive launch → scale proven channels → dominate market'
+    },
+    gradual_ramp: {
+        recommendedGrowth: 'channel_diversify', 
+        recommendedScale: 'efficiency_focus',
+        rationale: 'Conservative start → diversify risk → optimize efficiency'
+    },
+    consistent_burn: {
+        recommendedGrowth: 'retention_acquisition',
+        recommendedScale: 'lifecycle_optimization', 
+        rationale: 'Steady foundation → balance growth & retention → optimize full funnel'
+    },
+    viral_focus: {
+        recommendedGrowth: 'content_amplify',
+        recommendedScale: 'brand_building',
+        rationale: 'Viral mechanics → content scale → brand differentiation'
+    },
+    event_driven: {
+        recommendedGrowth: 'partnership_focus',
+        recommendedScale: 'global_expansion',
+        rationale: 'Event momentum → strategic partnerships → geographic expansion'
+    }
+};
 
 // Utility function to update slider display values
 function updateSliderValue(slider) {
@@ -28,7 +154,14 @@ function updateAnnualPrice() {
     const monthlyPrice = parseFloat(document.getElementById('appPrice').value) || 0;
     const annualDiscount = parseFloat(document.getElementById('annualDiscount').value) / 100 || 0;
     const annualPrice = monthlyPrice * 12 * (1 - annualDiscount);
-    document.getElementById('annualPrice').value = annualPrice.toFixed(2);
+    
+    const displayEl = document.getElementById('annualPriceDisplay');
+    if (displayEl) {
+        displayEl.innerHTML = `
+            <strong>Effective Annual Price: £${annualPrice.toFixed(2)}</strong>
+            <small>Blended rate considering discount adoption</small>
+        `;
+    }
 }
 
 // Format currency
@@ -37,824 +170,394 @@ function formatCurrency(amount) {
 }
 
 // Main calculation function
-function calculateProjections() {
-    // Get all input values
-    const appPrice = parseFloat(document.getElementById('appPrice').value);
-    const annualDiscount = parseFloat(document.getElementById('annualDiscount').value) / 100;
-    const annualPrice = appPrice * 12 * (1 - annualDiscount);
-    const annualPlanPercentage = parseFloat(document.getElementById('annualPlanPercentage').value) / 100;
-    const projectionMonths = parseInt(document.getElementById('projectionMonths').value);
-    const startingMAU = parseInt(document.getElementById('startingMAU').value);
+function calculateProjections(isManualTrigger = false) {
+    console.log(`🚀 Starting calculateProjections... (Manual Trigger: ${isManualTrigger})`);
     
-    // Calculate how many years we need based on projection period
-    const projectionYears = Math.ceil(projectionMonths / 12);
-    
-    // Build growth rates object only for available years
-    const growthRates = {};
-    const growthInputs = ['year1Growth', 'year2Growth', 'year3Growth', 'year4Growth', 'year5Growth'];
-    for (let i = 1; i <= Math.min(projectionYears, 5); i++) {
-        const inputElement = document.getElementById(growthInputs[i-1]);
-        if (inputElement && inputElement.closest('.input-group').style.display !== 'none') {
-            growthRates[i] = parseFloat(inputElement.value) / 100;
-        }
-    }
-    
-    const initialConversion = parseFloat(document.getElementById('initialConversion').value) / 100;
-    const conversionGrowth = parseFloat(document.getElementById('conversionGrowth').value) / 100;
-    const initialChurnRate = parseFloat(document.getElementById('churnRate').value) / 100; // Legacy for compatibility
-    const freeChurnRate = parseFloat(document.getElementById('freeChurnRate')?.value || '6') / 100;
-    const paidChurnRate = parseFloat(document.getElementById('paidChurnRate')?.value || '3') / 100;
-    const churnImprovement = parseFloat(document.getElementById('churnImprovement').value) / 100;
-    
-    // Validation to prevent NaN issues
-    if (isNaN(freeChurnRate) || isNaN(paidChurnRate) || isNaN(churnImprovement) || isNaN(startingMAU) || isNaN(projectionMonths)) {
-        console.error('Invalid input values:', { freeChurnRate, paidChurnRate, churnImprovement, startingMAU, projectionMonths });
-        return;
-    }
-    
-    const b2bStartMonth = parseInt(document.getElementById('b2bStartMonth').value);
-    const b2bPercentage = parseFloat(document.getElementById('b2bPercentage').value) / 100;
-    
-    // Build cost objects only for available years
-    const teamCosts = {};
-    const techCosts = {};
-    const marketingCosts = {};
-    
-    const costYearsToLoad = Math.min(projectionYears, 3); // We only have 3 years of cost inputs
-    for (let i = 1; i <= costYearsToLoad; i++) {
-        const teamElement = document.getElementById(`teamCostY${i}`);
-        const techElement = document.getElementById(`techCostY${i}`);
-        const marketingElement = document.getElementById(`marketingCostY${i}`);
-        
-        if (teamElement && teamElement.closest('.cost-year-' + i).style.display !== 'none') {
-            teamCosts[i] = parseFloat(teamElement.value) || 0;
-            techCosts[i] = parseFloat(techElement.value) || 0;
-            marketingCosts[i] = parseFloat(marketingElement.value) || 0;
-        }
-    }
-    
-    const seedInvestment = parseFloat(document.getElementById('seedInvestment').value);
-    const equityOffered = parseFloat(document.getElementById('equityOffered').value) / 100;
-    const valuationMultiple = parseFloat(document.getElementById('valuationMultiple').value);
-    
-    // Collect beta period parameters
-    const betaUsersM0 = parseInt(document.getElementById('betaUsersM0').value) || 50;
-    const betaUsersM1 = parseInt(document.getElementById('betaUsersM1').value) || 120;
-    const betaUsersM2 = parseInt(document.getElementById('betaUsersM2').value) || 200;
-    const betaTeamCostM0 = isNaN(parseFloat(document.getElementById('betaTeamCostM0').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM0').value);
-    const betaTeamCostM1 = isNaN(parseFloat(document.getElementById('betaTeamCostM1').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM1').value);
-    const betaTeamCostM2 = isNaN(parseFloat(document.getElementById('betaTeamCostM2').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM2').value);
-    const betaTechCostM0 = isNaN(parseFloat(document.getElementById('betaTechCostM0').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM0').value);
-    const betaTechCostM1 = isNaN(parseFloat(document.getElementById('betaTechCostM1').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM1').value);
-    const betaTechCostM2 = isNaN(parseFloat(document.getElementById('betaTechCostM2').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM2').value);
-    const betaMarketingCostM0 = isNaN(parseFloat(document.getElementById('betaMarketingCostM0').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM0').value);
-    const betaMarketingCostM1 = isNaN(parseFloat(document.getElementById('betaMarketingCostM1').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM1').value);
-    const betaMarketingCostM2 = isNaN(parseFloat(document.getElementById('betaMarketingCostM2').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM2').value);
+    try {
+        const getEl = (id) => document.getElementById(id);
+        const getVal = (id) => parseFloat(getEl(id)?.value) || 0;
+        const getInt = (id) => parseInt(getEl(id)?.value) || 0;
+        const getChecked = (id) => getEl(id)?.checked || false;
 
-    const parameters = {
-        appPrice, annualDiscount, annualPlanPercentage, projectionMonths, startingMAU,
-        growthRates, initialConversion, conversionGrowth, initialChurnRate, freeChurnRate, paidChurnRate, churnImprovement,
-        b2bStartMonth, b2bPercentage, teamCosts, techCosts, marketingCosts,
-        seedInvestment, equityOffered, valuationMultiple,
-        // Beta period parameters
-        betaUsersM0, betaUsersM1, betaUsersM2,
-        betaTeamCostM0, betaTeamCostM1, betaTeamCostM2,
-        betaTechCostM0, betaTechCostM1, betaTechCostM2,
-        betaMarketingCostM0, betaMarketingCostM1, betaMarketingCostM2
-    };
-    populateParametersSummary(parameters);
-    
-    // Calculate projections
-    let monthlyData = [];
-    let mau = startingMAU;
-    let premiumUsers = 0;
-    let tierUserCounts = {}; // For tiered pricing
-    let newPremiumUsersByMonth = {}; // For cohort analysis
-    let totalRevenue = 0;
-    let totalCosts = 0;
-    let breakEvenMonth = null;
-    let cashBalance = seedInvestment;
-    let currentBurnRate = 0;
-    
-    // Year-by-year cost tracking
-    let yearCosts = {};
-    
-    // Start from -2 to include 3 beta development months before Month 1
-    for (let monthIndex = -2; monthIndex <= projectionMonths; monthIndex++) {
-        // Calculate display month (months -2, -1, 0 all show as "Month 0", then Month 1, 2, 3...)
-        const displayMonth = monthIndex < 1 ? 0 : monthIndex;
+        // Get all input values
+        const appPrice = getVal('appPrice');
+        const annualDiscount = getVal('annualDiscount') / 100;
+        const annualPrice = appPrice * 12 * (1 - annualDiscount);
+        const annualPlanPercentage = getVal('annualPlanPercentage') / 100;
+        const projectionMonths = getInt('projectionPeriod');
+        const startingMAU = getInt('startingMAU');
         
-        // Adjust year calculation - Year 1 starts from Month 1 onwards
-        const year = monthIndex < 1 ? 1 : Math.ceil(monthIndex / 12);
-        // Use the appropriate growth rate, fallback to last available if year exceeds available rates
-        const lastAvailableGrowthYear = Math.max(...Object.keys(growthRates).map(Number));
-        const growthRate = growthRates[Math.min(year, lastAvailableGrowthYear)] || growthRates[lastAvailableGrowthYear];
-        
-        const yearsElapsed = Math.max(0, (monthIndex - 1) / 12); // Start counting from month 1
-        const conversionRate = Math.min(initialConversion + (conversionGrowth * yearsElapsed), 0.25);
-        const churnRate = Math.max(initialChurnRate - (churnImprovement * yearsElapsed), 0.015);
-        
-        // PROPER MAU WATERFALL CALCULATION
-        let freeUsers, newMAU, churnedMAU;
-        
-        if (monthIndex < 1) {
-            // Beta development months (-2, -1, 0): Use beta development values
-            const betaUsersM0 = parseInt(document.getElementById('betaUsersM0').value) || 50;
-            const betaUsersM1 = parseInt(document.getElementById('betaUsersM1').value) || 120;
-            const betaUsersM2 = parseInt(document.getElementById('betaUsersM2').value) || 200;
-            
-            if (monthIndex === -2) {
-                mau = betaUsersM0;
-            } else if (monthIndex === -1) {
-                mau = betaUsersM1;
-            } else if (monthIndex === 0) {
-                mau = betaUsersM2;
-            }
-            
-            premiumUsers = 0;
-            freeUsers = mau;
-        } else if (monthIndex === 1) {
-            // Month 1: App launch - start with designated MAU from slider
-            mau = startingMAU;
-            premiumUsers = 0; // No premium users yet from beta months
-            freeUsers = mau;
-        } else {
-            // Apply churn to existing users FIRST (before any growth)
-            // Use separate churn rates with annual improvement
-            const currentFreeChurnRate = Math.max(freeChurnRate - (churnImprovement * yearsElapsed), 0.02);
-            const currentPaidChurnRate = Math.max(paidChurnRate - (churnImprovement * yearsElapsed), 0.01);
-            
-            // Calculate churn for each segment
-            const existingFreeUsers = mau - premiumUsers;
-            const churnedFreeUsers = Math.round(existingFreeUsers * currentFreeChurnRate);
-            const churnedPremiumUsers = Math.round(premiumUsers * currentPaidChurnRate);
-            churnedMAU = churnedFreeUsers + churnedPremiumUsers;
-            
-            // Apply churn first
-            const retainedFreeUsers = existingFreeUsers - churnedFreeUsers;
-            const retainedPremiumUsers = premiumUsers - churnedPremiumUsers;
-            const retainedMAU = retainedFreeUsers + retainedPremiumUsers;
-            
-            // Calculate new user acquisition based on retained user base
-            newMAU = Math.round(retainedMAU * growthRate);
-            
-            // Update totals
-            freeUsers = retainedFreeUsers + newMAU; // All new users start as free
-            premiumUsers = retainedPremiumUsers; // Premium users only from retention + conversion
-            mau = freeUsers + premiumUsers;
-        }
-        
-        let monthlyRevenue = 0;
-        let totalNewPremiumUsersThisMonth = 0;
-        let monthlyTierRevenue = {}; // To track revenue per tier for this month
-
-        // Calculate combined conversion rate for tiered pricing
-        let combinedConversionRate = conversionRate; // Default to single-tier rate
-        
-        // CONVERSION FROM FREE TO PREMIUM (only from free user pool, starts in month 1)
-        if (monthIndex >= 1 && document.getElementById('enableTieredPricing').checked) {
-            const activeTiers = getActiveTiers();
-            
-            // Calculate combined conversion rate from all active tiers
-            combinedConversionRate = activeTiers.reduce((sum, tier) => sum + tier.conversionRate, 0);
-            
-            // Apply tier-specific churn to existing tier users (already done above for total premium)
-            if (monthIndex > 1) {
-                // Proportionally reduce each tier based on overall premium churn
-                const currentPaidChurnRate = Math.max(paidChurnRate - (churnImprovement * yearsElapsed), 0.01);
-                for (const tier of activeTiers) {
-                    if (tierUserCounts[tier.name]) {
-                        tierUserCounts[tier.name] = Math.round(tierUserCounts[tier.name] * (1 - currentPaidChurnRate));
-                    }
-                }
-            }
-
-            // Convert free users to premium tiers
-            activeTiers.forEach(tier => {
-                const newUsersForTier = Math.round(freeUsers * tier.conversionRate);
-                tierUserCounts[tier.name] = (tierUserCounts[tier.name] || 0) + newUsersForTier;
-                totalNewPremiumUsersThisMonth += newUsersForTier;
-            });
-            
-            // Calculate total premium users and adjust free users
-            premiumUsers = 0;
-            for (const tier of activeTiers) {
-                premiumUsers += tierUserCounts[tier.name] || 0;
-            }
-            
-            // Update free users after conversions
-            freeUsers = Math.max(0, mau - premiumUsers);
-
-            // Calculate revenue for each tier
-            monthlyRevenue = 0;
-            for (const tier of activeTiers) {
-                const tierUsers = tierUserCounts[tier.name] || 0;
-
-                const tierMonthlyUsers = Math.round(tierUsers * (1 - annualPlanPercentage));
-                const tierAnnualUsers = tierUsers - tierMonthlyUsers;
-                const tierAnnualPrice = tier.price * 12 * (1 - annualDiscount);
-                
-                const revenueForTier = (tierMonthlyUsers * tier.price) + (tierAnnualUsers * (tierAnnualPrice / 12));
-                monthlyRevenue += revenueForTier;
-                monthlyTierRevenue[tier.name] = revenueForTier;
-            }
-        } else if (monthIndex >= 1) {
-            // Standard single-tier pricing - convert from free user pool (starts in month 1)
-            tierUserCounts = {}; // Clear any stale tiered data
-            
-            // Convert free users to premium
-            const newPremiumUsers = Math.round(freeUsers * conversionRate);
-            premiumUsers += newPremiumUsers;
-            totalNewPremiumUsersThisMonth = newPremiumUsers;
-            
-            // Update free users after conversion
-            freeUsers = Math.max(0, mau - premiumUsers);
-            
-            const monthlyUsers = Math.round(premiumUsers * (1 - annualPlanPercentage));
-            const annualUsers = premiumUsers - monthlyUsers;
-            monthlyRevenue = (monthlyUsers * appPrice) + (annualUsers * (annualPrice / 12));
-        } else {
-            // Beta development period: no paid conversions, no revenue
-            tierUserCounts = {}; // Clear any stale tiered data
-            premiumUsers = 0;
-            totalNewPremiumUsersThisMonth = 0;
-            monthlyRevenue = 0;
-        }
-
-        newPremiumUsersByMonth[monthIndex] = totalNewPremiumUsersThisMonth;
-        // Premium users are now properly calculated above - no need to constrain again
-        
-        let b2bRevenue = 0;
-        if (monthIndex >= 1 && monthIndex >= b2bStartMonth && b2bPercentage > 0) {
-            b2bRevenue = monthlyRevenue * b2bPercentage;
-        }
-        
-        const totalMonthlyRevenue = monthlyRevenue + b2bRevenue;
-        const arr = totalMonthlyRevenue * 12;
-        totalRevenue += totalMonthlyRevenue;
-        
-        // Cost calculation with beta period handling
-        let monthlyTeamCost, monthlyTechCost, monthlyMarketingCost;
-        
-        if (monthIndex < 1) {
-            // Beta development costs - use specific beta cost inputs (respect zero values)
-            if (monthIndex === -2) {
-                monthlyTeamCost = isNaN(parseFloat(document.getElementById('betaTeamCostM0').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM0').value);
-                monthlyTechCost = isNaN(parseFloat(document.getElementById('betaTechCostM0').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM0').value);
-                monthlyMarketingCost = isNaN(parseFloat(document.getElementById('betaMarketingCostM0').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM0').value);
-            } else if (monthIndex === -1) {
-                monthlyTeamCost = isNaN(parseFloat(document.getElementById('betaTeamCostM1').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM1').value);
-                monthlyTechCost = isNaN(parseFloat(document.getElementById('betaTechCostM1').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM1').value);
-                monthlyMarketingCost = isNaN(parseFloat(document.getElementById('betaMarketingCostM1').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM1').value);
-            } else if (monthIndex === 0) {
-                monthlyTeamCost = isNaN(parseFloat(document.getElementById('betaTeamCostM2').value)) ? 0 : parseFloat(document.getElementById('betaTeamCostM2').value);
-                monthlyTechCost = isNaN(parseFloat(document.getElementById('betaTechCostM2').value)) ? 0 : parseFloat(document.getElementById('betaTechCostM2').value);
-                monthlyMarketingCost = isNaN(parseFloat(document.getElementById('betaMarketingCostM2').value)) ? 0 : parseFloat(document.getElementById('betaMarketingCostM2').value);
-            }
-        } else {
-            // Regular production costs for month 1+
-            const currentYear = Math.ceil(monthIndex / 12);
-            const lastAvailableCostYear = Math.max(...Object.keys(teamCosts).map(Number));
-            const costYear = Math.min(currentYear, lastAvailableCostYear);
-            const baseTeamCost = teamCosts[costYear] || teamCosts[lastAvailableCostYear] || 0;
-            const baseTechCost = techCosts[costYear] || techCosts[lastAvailableCostYear] || 0;
-            const baseMarketingCost = marketingCosts[costYear] || marketingCosts[lastAvailableCostYear] || 0;
-            
-            // Apply enhanced cost management (escalations and marketing phases)
-            const adjustedCosts = applyCostEscalations(baseTeamCost, baseTechCost, baseMarketingCost, monthIndex);
-            monthlyTeamCost = adjustedCosts.teamCost;
-            monthlyTechCost = adjustedCosts.techCost;
-            monthlyMarketingCost = adjustedCosts.marketingCost;
-        }
-        
-        // Add variable costs if enabled (but not during beta development months)
-        let monthlyVariableCosts = 0;
-        if (monthIndex >= 1 && document.getElementById('enableVariableCosts').checked) {
-            const costPerUser = parseFloat(document.getElementById('costPerUser').value) || 0;
-            const supportCostPerUser = parseFloat(document.getElementById('supportCostPerUser').value) || 0;
-            const infraScaling = parseFloat(document.getElementById('infraScaling').value) || 1;
-            
-            // Calculate costs separately for free and paid users (ensure no negative free users)
-            const freeUsers = Math.max(0, mau - premiumUsers);
-            const basicUserCosts = freeUsers * costPerUser;
-            const premiumUserCosts = premiumUsers * supportCostPerUser;
-            
-            // Apply infrastructure scaling
-            monthlyVariableCosts = (basicUserCosts + premiumUserCosts) * infraScaling;
-        }
-        
-        const monthlyCosts = monthlyTeamCost + monthlyTechCost + monthlyMarketingCost + monthlyVariableCosts;
-        totalCosts += monthlyCosts;
-        
-        const netIncome = totalMonthlyRevenue - monthlyCosts;
-        cashBalance += netIncome;
-        
-        // Add funding rounds if enabled (starts in month 1)
-        if (monthIndex >= 1 && document.getElementById('enableMultipleRounds').checked) {
-            const seriesAMonth = parseInt(document.getElementById('seriesAMonth').value);
-            const seriesAAmount = parseFloat(document.getElementById('seriesAAmount').value);
-            const seriesBMonth = parseInt(document.getElementById('seriesBMonth').value);
-            const seriesBAmount = parseFloat(document.getElementById('seriesBAmount').value);
-            const seriesCMonth = parseInt(document.getElementById('seriesCMonth').value);
-            const seriesCAmount = parseFloat(document.getElementById('seriesCAmount').value);
-            
-            if (monthIndex === seriesAMonth && seriesAMonth <= projectionMonths) {
-                cashBalance += seriesAAmount;
-            }
-            if (monthIndex === seriesBMonth && seriesBMonth <= projectionMonths) {
-                cashBalance += seriesBAmount;
-            }
-            if (monthIndex === seriesCMonth && seriesCMonth <= projectionMonths) {
-                cashBalance += seriesCAmount;
-            }
-        }
-        
-        // Track current burn rate (negative net income)
-        if (netIncome < 0) {
-            currentBurnRate = -netIncome;
-        }
-        
-        if (breakEvenMonth === null && netIncome > 0) {
-            breakEvenMonth = monthIndex >= 1 ? monthIndex : 1;
-        }
-        
-        // Track year costs
-        if (!yearCosts[year]) {
-            yearCosts[year] = {
-                team: 0,
-                tech: 0,
-                marketing: 0,
-                variable: 0,
-                total: 0,
-                revenue: 0,
-                months: 0
-            };
-        }
-        yearCosts[year].team += monthlyTeamCost;
-        yearCosts[year].tech += monthlyTechCost;
-        yearCosts[year].marketing += monthlyMarketingCost;
-        yearCosts[year].variable += monthlyVariableCosts;
-        yearCosts[year].total += monthlyCosts;
-        yearCosts[year].revenue += totalMonthlyRevenue;
-        yearCosts[year].months += 1;
-        
-        monthlyData.push({
-            month: displayMonth,
-            mau: mau,
-            growthRate: growthRate,
-            premiumUsers: premiumUsers,
-            tierUserCounts: { ...tierUserCounts }, // Store a snapshot of tier counts for this month
-            monthlyTierRevenue: { ...monthlyTierRevenue }, // Store revenue breakdown
-            conversionRate: combinedConversionRate, // Use combined rate for tiered pricing
-            monthlyRevenue: totalMonthlyRevenue,
-            arr: arr,
-            teamCost: monthlyTeamCost,
-            techCost: monthlyTechCost,
-            marketingCost: monthlyMarketingCost,
-            variableCosts: monthlyVariableCosts,
-            monthlyCosts: monthlyCosts,
-            netIncome: netIncome,
-            cashBalance: cashBalance
-        });
-    }
-    
-    // Calculate final metrics
-    const finalData = monthlyData[monthlyData.length - 1];
-    const finalARR = finalData.arr;
-    const netProfit = totalRevenue - totalCosts;
-    
-    // Calculate LTV more accurately using paid user churn rate
-    const avgPaidChurnRate = Math.max(paidChurnRate - (churnImprovement * (projectionMonths / 12)), 0.01);
-    const avgLifespan = 1 / avgPaidChurnRate; // months
-    
-    let avgMonthlyRevenue;
-    if (document.getElementById('enableTieredPricing').checked) {
-        // Calculate weighted average based on active tiers and their conversion rates
-        const activeTiers = getActiveTiers();
-        let totalWeightedRevenue = 0;
-        let totalConversionWeight = 0;
-        
-        activeTiers.forEach(tier => {
-            const tierPrice = (tier.price * (1 - annualPlanPercentage)) + ((tier.price * 12 * (1 - annualDiscount)) / 12 * annualPlanPercentage);
-            totalWeightedRevenue += tierPrice * tier.conversionRate;
-            totalConversionWeight += tier.conversionRate;
-        });
-        
-        avgMonthlyRevenue = totalConversionWeight > 0 ? totalWeightedRevenue / totalConversionWeight : 0;
-    } else {
-        avgMonthlyRevenue = (appPrice * (1 - annualPlanPercentage)) + (annualPrice / 12 * annualPlanPercentage);
-    }
-    
-    const ltv = avgMonthlyRevenue * avgLifespan;
-    
-    // Calculate CAC properly - this is critical for realistic modeling
-    const totalMarketingCosts = monthlyData.reduce((sum, d) => sum + d.marketingCost, 0);
-    
-    // Total acquisition costs = Marketing + Sales overhead (20% of total costs is more realistic)
-    const salesOverhead = totalCosts * 0.20;
-    const totalAcquisitionCosts = totalMarketingCosts + salesOverhead;
-    
-    // Calculate total NEW premium users acquired throughout the projection
-    const totalUsersAcquired = Object.values(newPremiumUsersByMonth).reduce((a, b) => a + b, 0);
-    
-    // CAC = Total acquisition costs / Total users acquired
-    const cac = totalUsersAcquired > 0 ? totalAcquisitionCosts / totalUsersAcquired : 0;
-    
-    // Validate CAC is realistic (should typically be £20-200 for SaaS)
-    const ltvCacRatio = cac > 0 ? (ltv / cac).toFixed(1) : 'N/A';
-    
-    // Add debugging info for transparency
-    const acquisitionMetrics = {
-        totalMarketingCosts: totalMarketingCosts,
-        salesOverhead: salesOverhead,
-        totalAcquisitionCosts: totalAcquisitionCosts,
-        totalUsersAcquired: totalUsersAcquired,
-        averageCAC: cac,
-        customerLTV: ltv,
-        ltvCacRatio: ltvCacRatio
-    };
-    
-    // Calculate runway based on current burn rate or average if profitable
-    let runway = 0;
-    if (currentBurnRate > 0) {
-        runway = Math.round(cashBalance / currentBurnRate);
-    } else if (breakEvenMonth) {
-        // If profitable, show months of cash available at current profit rate
-        const currentProfit = finalData.netIncome;
-        runway = currentProfit > 0 ? '∞' : Math.round(cashBalance / Math.abs(currentProfit));
-    } else {
-        // Still burning, use current burn
-        const lastNegativeMonth = monthlyData.filter(d => d.netIncome < 0).pop();
-        if (lastNegativeMonth) {
-            runway = Math.round(cashBalance / Math.abs(lastNegativeMonth.netIncome));
-        }
-    }
-    
-    const exitValuation = finalARR * valuationMultiple;
-    const investorReturn = exitValuation * equityOffered;
-    const returnMultiple = investorReturn / seedInvestment;
-    
-    // Advanced Features Data Processing
-    let tieredData = null;
-    let cohortData = null;
-    let variableData = null;
-    let fundingData = null;
-    
-    // Process Tiered Pricing
-    if (document.getElementById('enableTieredPricing').checked) {
-        const finalMonthData = monthlyData[monthlyData.length - 1];
-        const activeTiers = getActiveTiers();
-        
-        tieredData = [];
-        let totalFinalMonthRevenue = 0;
-
-        // Use the accurately tracked user counts and revenue from the final month
-        activeTiers.forEach(tier => {
-            const finalUsers = finalMonthData.tierUserCounts[tier.name] || 0;
-            const finalRevenue = finalMonthData.monthlyTierRevenue[tier.name] || 0;
-            totalFinalMonthRevenue += finalRevenue;
-
-            tieredData.push({
-                name: tier.name,
-                users: finalUsers,
-                revenue: finalRevenue,
-                price: tier.price,
-                percentage: 0 // Will be calculated based on revenue
-            });
-        });
-        
-        // Calculate revenue percentages based on the final month's revenue
-        tieredData.forEach(tier => {
-            tier.percentage = totalFinalMonthRevenue > 0 ? (tier.revenue / totalFinalMonthRevenue) * 100 : 0;
-        });
-    }
-    
-    // Process Cohort Analysis
-    if (document.getElementById('enableCohortTracking').checked) {
-        const retentionDecay = parseFloat(document.getElementById('retentionDecay').value) / 100 || 0.015;
-        
-        cohortData = [];
-        
-        // Track each monthly cohort of newly acquired premium users (starting from month 1)
-        for (let cohortMonth = 1; cohortMonth <= Math.min(projectionMonths, 12); cohortMonth++) {
-            // Calculate new users acquired in this cohort month
-            const newUsersAcquired = newPremiumUsersByMonth[cohortMonth] || 0;
-            
-            // Calculate how many of this cohort remain at the end of the projection
-            const monthsElapsed = projectionMonths - cohortMonth;
-            if (monthsElapsed >= 0) {
-                // Apply churn over time with decay (older cohorts have worse retention)
-                const baseChurnRate = Math.max(initialChurnRate - (churnImprovement * ((cohortMonth - 1) / 12)), 0.015);
-                const decayedChurnRate = baseChurnRate + (retentionDecay * (monthsElapsed / 12));
-                const finalChurnRate = Math.min(decayedChurnRate, 0.15); // Cap at 15% monthly churn
-                
-                // Calculate retention rate after monthsElapsed
-                const retentionRate = Math.pow(1 - finalChurnRate, monthsElapsed);
-                const remainingUsers = Math.round(newUsersAcquired * retentionRate);
-                
-                // Calculate LTV for this cohort based on their retention
-                const cohortAvgLifespan = 1 / finalChurnRate; // months
-                const cohortLtv = avgMonthlyRevenue * cohortAvgLifespan;
-                
-                cohortData.push({
-                    month: cohortMonth,
-                    initialUsers: newUsersAcquired,
-                    monthsElapsed: monthsElapsed,
-                    retentionRate: retentionRate,
-                    currentUsers: remainingUsers,
-                    avgLtv: cohortLtv,
-                    churnRate: finalChurnRate
-                });
-            }
-        }
-    }
-    
-    // Process Variable Costs
-    if (document.getElementById('enableVariableCosts').checked) {
-        const costPerUser = parseFloat(document.getElementById('costPerUser').value);
-        const supportCost = parseFloat(document.getElementById('supportCostPerUser').value);
-        const infraScaling = parseFloat(document.getElementById('infraScaling').value);
-        
-        const finalMonthData = monthlyData[monthlyData.length - 1];
-        const variableUserCosts = finalMonthData.mau * costPerUser;
-        const variableSupportCosts = finalMonthData.premiumUsers * supportCost;
-        const infraCosts = (variableUserCosts + variableSupportCosts) * infraScaling;
-        
-        variableData = [
-            {
-                label: 'User Support Costs',
-                value: variableUserCosts * projectionMonths
-            },
-            {
-                label: 'Premium Support Costs',
-                value: variableSupportCosts * projectionMonths
-            },
-            {
-                label: 'Infrastructure Scaling',
-                value: infraCosts * projectionMonths
-            }
-        ];
-    }
-    
-    // Process Multiple Funding Rounds
-    if (document.getElementById('enableMultipleRounds').checked) {
-        const seriesAMonth = parseInt(document.getElementById('seriesAMonth').value);
-        const seriesAAmount = parseFloat(document.getElementById('seriesAAmount').value);
-        const seriesAEquity = parseFloat(document.getElementById('seriesAEquity').value);
-        
-        const seriesBMonth = parseInt(document.getElementById('seriesBMonth').value);
-        const seriesBAmount = parseFloat(document.getElementById('seriesBAmount').value);
-        const seriesBEquity = parseFloat(document.getElementById('seriesBEquity').value);
-        
-        const seriesCMonth = parseInt(document.getElementById('seriesCMonth').value);
-        const seriesCAmount = parseFloat(document.getElementById('seriesCAmount').value);
-        const seriesCEquity = parseFloat(document.getElementById('seriesCEquity').value);
-        
-        const rounds = [];
-        let founderEquity = 100 - equityOffered; // After seed
-        
-        if (seriesAMonth <= projectionMonths) {
-            const arrAtA = monthlyData[seriesAMonth - 1].arr;
-            const seriesAValuation = seriesAAmount / (seriesAEquity / 100);
-            rounds.push({
-                name: 'Series A',
-                month: seriesAMonth,
-                amount: seriesAAmount,
-                equity: seriesAEquity,
-                valuation: seriesAValuation
-            });
-            founderEquity *= (1 - seriesAEquity / 100);
-        }
-        
-        if (seriesBMonth <= projectionMonths) {
-            const seriesBValuation = seriesBAmount / (seriesBEquity / 100);
-            rounds.push({
-                name: 'Series B',
-                month: seriesBMonth,
-                amount: seriesBAmount,
-                equity: seriesBEquity,
-                valuation: seriesBValuation
-            });
-            founderEquity *= (1 - seriesBEquity / 100);
-        }
-        
-        if (seriesCMonth <= projectionMonths) {
-            const seriesCValuation = seriesCAmount / (seriesCEquity / 100);
-            rounds.push({
-                name: 'Series C',
-                month: seriesCMonth,
-                amount: seriesCAmount,
-                equity: seriesCEquity,
-                valuation: seriesCValuation
-            });
-            founderEquity *= (1 - seriesCEquity / 100);
-        }
-        
-        fundingData = {
-            rounds: rounds,
-            dilution: [
-                { stakeholder: 'Founders', ownership: founderEquity.toFixed(1) },
-                { stakeholder: 'Seed Investors', ownership: (equityOffered * (founderEquity / 100)).toFixed(1) },
-                { stakeholder: 'Series A+', ownership: (100 - founderEquity - (equityOffered * (founderEquity / 100))).toFixed(1) }
-            ]
+        const growthRates = {
+            1: getVal('year1Growth') / 100,
+            2: getVal('year2Growth') / 100,
+            3: getVal('year3Growth') / 100,
         };
-    }
-    
-    // Update Advanced Analytics
-    if (tieredData) updateTieredRevenueAnalysis(tieredData);
-    if (cohortData) updateCohortAnalysis(cohortData);
-    if (variableData) updateVariableCostAnalysis(variableData);
-    if (fundingData) updateFundingRoundsAnalysis(fundingData);
-    
-    // Always show sensitivity analysis with actual input parameters
-    updateSensitivityAnalysis(acquisitionMetrics, ltv, initialChurnRate, finalARR, netProfit, totalRevenue, totalCosts);
-    
-    // Store global data for export
-    globalMonthlyData = monthlyData;
-    globalSummaryData = {
-        finalMAU: finalData.mau,
-        finalARR: finalARR,
-        breakEvenMonth: breakEvenMonth,
-        exitValuation: exitValuation,
-        investorReturn: investorReturn,
-        returnMultiple: returnMultiple,
-        totalRevenue: totalRevenue,
-        totalCosts: totalCosts,
-        netProfit: netProfit,
-        ltvCacRatio: ltvCacRatio,
-        customerLTV: ltv,
-        monthlyARPU: avgMonthlyRevenue,
-        customerCAC: cac,
-        totalUsersAcquired: totalUsersAcquired,
-        runway: runway,
-        currentBurnRate: currentBurnRate,
-        yearCosts: yearCosts,
-        parameters: parameters,
-        // Advanced features data
-        tieredData: tieredData,
-        cohortData: cohortData,
-        variableData: variableData,
-        fundingData: fundingData
-    };
-    
-    // Update summary
-    const finalMAUElement = document.getElementById('finalMAU');
-    const finalARRElement = document.getElementById('finalARR');
-    const breakEvenElement = document.getElementById('breakEvenMonth');
-    const exitValElement = document.getElementById('exitValuation');
-    const investorReturnElement = document.getElementById('investorReturn');
-    
-    if (finalMAUElement) finalMAUElement.textContent = finalData.mau.toLocaleString();
-    
-    // Show free vs paid breakdown if tiered pricing is enabled
-    const freeUsersBreakdownElement = document.getElementById('freeUsersBreakdown');
-    const freeVsPaidElement = document.getElementById('freeVsPaid');
-    
-    if (document.getElementById('enableTieredPricing').checked && freeUsersBreakdownElement && freeVsPaidElement) {
-        const finalPaidUsers = finalData.premiumUsers;
-        const finalFreeUsers = finalData.mau - finalPaidUsers;
-        const paidPercentage = ((finalPaidUsers / finalData.mau) * 100).toFixed(1);
         
-        freeUsersBreakdownElement.style.display = 'block';
-        freeVsPaidElement.innerHTML = `
-            <div style="font-size: 0.85rem; line-height: 1.4;">
-                <div style="color: #4ade80;">FREE: ${finalFreeUsers.toLocaleString()} users</div>
-                <div style="color: #667eea;">PAID: ${finalPaidUsers.toLocaleString()} users (${paidPercentage}%)</div>
-            </div>
-        `;
-    } else if (freeUsersBreakdownElement) {
-        freeUsersBreakdownElement.style.display = 'none';
-    }
-    
-    if (finalARRElement) finalARRElement.textContent = formatCurrency(finalARR);
-    if (breakEvenElement) breakEvenElement.textContent = breakEvenMonth ? `Month ${breakEvenMonth}` : 'Not reached';
-    if (exitValElement) exitValElement.textContent = formatCurrency(exitValuation);
-    if (investorReturnElement) investorReturnElement.textContent = formatCurrency(investorReturn) + ` (${returnMultiple.toFixed(1)}x)`;
-    
-    // Update metrics
-    const totalRevenueElement = document.getElementById('totalRevenue');
-    const totalCostsElement = document.getElementById('totalCosts');
-    const netProfitElement = document.getElementById('netProfit');
-    const ltvCacElement = document.getElementById('ltvCacRatio');
-    const customerLTVElement = document.getElementById('customerLTV');
-    const customerCACElement = document.getElementById('customerCAC');
-    const runwayElement = document.getElementById('runway');
-    const burnRateElement = document.getElementById('burnRate');
-    
-    if (totalRevenueElement) totalRevenueElement.textContent = formatCurrency(totalRevenue);
-    if (totalCostsElement) totalCostsElement.textContent = formatCurrency(totalCosts);
-    if (netProfitElement) {
-        netProfitElement.textContent = formatCurrency(netProfit);
-        netProfitElement.className = netProfit >= 0 ? 'metric-value positive' : 'metric-value negative';
-    }
-    if (ltvCacElement) {
-        ltvCacElement.textContent = ltvCacRatio + ':1';
-        // Color code the LTV:CAC ratio
-        const ratio = parseFloat(ltvCacRatio);
-        if (ratio >= 5) {
-            ltvCacElement.className = 'metric-value positive';
-        } else if (ratio >= 3) {
-            ltvCacElement.className = 'metric-value';
-        } else {
-            ltvCacElement.className = 'metric-value negative';
-        }
-    }
-    if (customerLTVElement) customerLTVElement.textContent = formatCurrency(ltv);
-    
-    // Update ARPU
-    const monthlyARPUElement = document.getElementById('monthlyARPU');
-    if (monthlyARPUElement) monthlyARPUElement.textContent = formatCurrency(avgMonthlyRevenue);
-    
-    if (customerCACElement) {
-        customerCACElement.textContent = formatCurrency(cac);
-        customerCACElement.className = cac > 100 ? 'metric-value negative' : 'metric-value positive';
-    }
-    if (runwayElement) runwayElement.textContent = runway + (runway === '∞' ? '' : ' months');
-    if (burnRateElement) burnRateElement.textContent = currentBurnRate > 0 ? formatCurrency(currentBurnRate) + '/mo' : 'Profitable';
-    
-    // Update cost breakdown
-    updateCostBreakdown(yearCosts);
-    
-    // Update CAC breakdown
-    updateCACBreakdown(acquisitionMetrics, avgMonthlyRevenue);
-    
-    // Update table header visibility for Enterprise tier
-    const enterpriseHeader = document.getElementById('enterpriseHeader');
-    if (enterpriseHeader) {
-        enterpriseHeader.style.display = document.getElementById('enableEnterpriseTier').checked ? 'table-cell' : 'none';
-    }
-    
-    // Update table
-    const tbody = document.getElementById('monthlyTableBody');
-    if (!tbody) return; // Add null check
-    
-    tbody.innerHTML = '';
-    
-    monthlyData.forEach(data => {
-        const row = tbody.insertRow();
+        const initialConversion = getVal('initialConversion') / 100;
+        const conversionGrowth = getVal('conversionGrowth') / 100;
+        const freeChurnRate = getVal('freeChurnRate') / 100;
+        const paidChurnRate = getVal('churnRate') / 100;
+        const churnImprovement = getVal('churnImprovement') / 100;
         
-        if (data.month === 12 || data.month === 24 || data.month === 36 || data.month === 48 || data.month === 60) {
-            row.className = 'year-highlight';
+        const b2bStartMonth = getInt('b2bStartMonth');
+        const b2bPercentage = getVal('b2bPercentage') / 100;
+        
+        const teamCosts = {
+            1: getVal('teamCostY1'),
+            2: getVal('teamCostY2'),
+            3: getVal('teamCostY3'),
+        };
+        const techCosts = {
+            1: getVal('techCostY1'),
+            2: getVal('techCostY2'),
+            3: getVal('techCostY3'),
+        };
+        const marketingCosts = {
+            1: getVal('marketingCostY1'),
+            2: getVal('marketingCostY2'),
+            3: getVal('marketingCostY3'),
+        };
+        
+        const seedInvestment = getVal('seedInvestment');
+        const equityOffered = getVal('equityOffered') / 100;
+        const valuationMultiple = getVal('valuationMultiple');
+
+        // Advanced Features Toggles
+        const enableTieredPricing = getChecked('enableTieredPricing');
+        const enableCohortTracking = getChecked('enableCohortTracking');
+        const enableVariableCosts = getChecked('enableVariableCosts');
+        const enableMultipleRounds = getChecked('enableMultipleRounds');
+        
+        const parameters = {
+            appPrice, annualDiscount, annualPlanPercentage, projectionMonths, startingMAU,
+            growthRates, initialConversion, conversionGrowth, freeChurnRate, paidChurnRate, churnImprovement,
+            b2bStartMonth, b2bPercentage, teamCosts, techCosts, marketingCosts,
+            seedInvestment, equityOffered, valuationMultiple,
+            enableTieredPricing, enableCohortTracking, enableVariableCosts, enableMultipleRounds,
+            costPerUser: getVal('costPerUser'),
+            supportCostPerUser: getVal('supportCostPerUser'),
+            infraScaling: getVal('infraScaling'),
+            churnRate: getVal('churnRate'), // Paid churn
+            churnImprovement: getVal('churnImprovement'),
+            b2bPercentage: getVal('b2bPercentage'),
+            teamCostY1: getVal('teamCostY1'),
+            teamCostY2: getVal('teamCostY2'),
+            teamCostY3: getVal('teamCostY3'),
+            techCostY1: getVal('techCostY1'),
+            techCostY2: getVal('techCostY2'),
+            techCostY3: getVal('techCostY3'),
+            marketingCostY1: getVal('marketingCostY1'),
+            marketingCostY2: getVal('marketingCostY2'),
+            marketingCostY3: getVal('marketingCostY3'),
+            retentionDecay: getVal('retentionDecay'),
+            cohortLtvMultiplier: getVal('cohortLtvMultiplier'),
+            seriesAMonth: getVal('seriesAMonth'),
+            seriesAAmount: getVal('seriesAAmount'),
+            seriesAEquity: getVal('seriesAEquity'),
+            seriesBMonth: getVal('seriesBMonth'),
+            seriesBAmount: getVal('seriesBAmount'),
+            seriesBEquity: getVal('seriesBEquity'),
+            enableCostEscalation: getChecked('enableCostEscalation'),
+            enableMarketingPhases: getChecked('enableMarketingPhases'),
+            costEscalations: JSON.parse(JSON.stringify(costEscalations)), // Deep copy
+            launchPhaseStart: getVal('launchPhaseStart'),
+            launchPhaseEnd: getVal('launchPhaseEnd'),
+            launchPhaseBudget: getVal('launchPhaseBudget'),
+            launchStrategy: getVal('launchStrategy'),
+            growthPhaseStart: getVal('growthPhaseStart'),
+            growthPhaseEnd: getVal('growthPhaseEnd'),
+            growthPhaseBudget: getVal('growthPhaseBudget'),
+            growthStrategy: getVal('growthStrategy'),
+            scalePhaseStart: getVal('scalePhaseStart'),
+            scalePhaseEnd: getVal('scalePhaseEnd'),
+            scalePhaseBudget: getVal('scalePhaseBudget'),
+            scaleStrategy: getVal('scaleStrategy'),
+            basicPrice: getVal('basicPrice'),
+            basicConversion: getVal('basicConversion'),
+            proPrice: getVal('proPrice'),
+            proConversion: getVal('proConversion'),
+            enterprisePrice: getVal('enterprisePrice'),
+            enterpriseConversion: getVal('enterpriseConversion'),
+            betaUsersM0: getInt('betaUsersM0'),
+            betaTeamCostM0: getVal('betaTeamCostM0'),
+            betaTechCostM0: getVal('betaTechCostM0'),
+            betaMarketingCostM0: getVal('betaMarketingCostM0'),
+            betaUsersM1: getInt('betaUsersM1'),
+            betaTeamCostM1: getVal('betaTeamCostM1'),
+            betaTechCostM1: getVal('betaTechCostM1'),
+            betaMarketingCostM1: getVal('betaMarketingCostM1'),
+            betaUsersM2: getInt('betaUsersM2'),
+            betaTeamCostM2: getVal('betaTeamCostM2'),
+            betaTechCostM2: getVal('betaTechCostM2'),
+            betaMarketingCostM2: getVal('betaMarketingCostM2'),
+        };
+
+        let monthlyData = [];
+        let totalRevenue = 0;
+        let totalCosts = 0;
+        let breakEvenMonth = null;
+        let cashBalance = seedInvestment;
+        let totalUsersAcquired = 0;
+        
+        // --- NEW: Beta Period Calculation (Months 0-2) ---
+        for (let i = 0; i < 3; i++) {
+            const betaUsers = getInt(`betaUsersM${i}`);
+            const teamCost = getVal(`betaTeamCostM${i}`);
+            const techCost = getVal(`betaTechCostM${i}`);
+            const marketingCost = getVal(`betaMarketingCostM${i}`);
+            const totalBetaCost = teamCost + techCost + marketingCost;
+            
+            cashBalance -= totalBetaCost;
+            totalCosts += totalBetaCost;
+
+            monthlyData.push({
+                month: i,
+                isBeta: true,
+                mau: betaUsers,
+                growthRate: 0,
+                freeUsers: betaUsers,
+                premiumUsers: 0, basicUsers: 0, proUsers: 0,
+                conversionRate: 0,
+                monthlyRevenue: 0,
+                arr: 0,
+                teamCost: teamCost,
+                techCost: techCost,
+                marketingCost: marketingCost,
+                variableCosts: 0,
+                monthlyCosts: totalBetaCost,
+                netIncome: -totalBetaCost,
+            });
         }
         
-        // Calculate tier breakdown for this month using the stored snapshot
-        const freeUsers = Math.max(0, data.mau - data.premiumUsers);
-        
-        let basicUsers = 0;
-        let proUsers = 0; 
-        let enterpriseUsers = 0;
-        
-        if (document.getElementById('enableTieredPricing').checked && data.tierUserCounts) {
-            basicUsers = data.tierUserCounts['Basic'] || 0;
-            proUsers = data.tierUserCounts['Pro'] || 0;
-            enterpriseUsers = data.tierUserCounts['Enterprise'] || 0;
-        } else {
-            // Simple pricing - show all premium users as "Pro" since that's the default
-            // To avoid confusion, let's put them in the Basic tier column, as it's the most fundamental paid tier.
-            basicUsers = data.premiumUsers;
-            proUsers = 0;
-            enterpriseUsers = 0;
+        // --- Main Projection Calculation (starts after beta) ---
+
+        // Tiered pricing state
+        let tierUserCounts = {};
+        if (enableTieredPricing) {
+            tierUserCounts = { 'Basic': 0, 'Pro': 0 };
+        }
+
+        // Initialize mau and freeUsers for the loop
+        let currentPremiumUsers = 0;
+        // The starting free users for the main projection are the users from the *last* beta month.
+        let currentFreeUsers = getInt('betaUsersM2'); 
+
+        for (let month = 1; month <= projectionMonths; month++) {
+            const timelineMonth = month + 2; // To account for 3 beta months (0, 1, 2)
+            const year = Math.ceil(month / 12);
+            const yearsElapsed = (timelineMonth - 1) / 12;
+
+            // 1. CHURN: Apply churn to the existing user base from the START of the month
+            const currentPaidChurnRate = Math.max(paidChurnRate * (1 - (churnImprovement * yearsElapsed)), 0.01);
+            const currentFreeChurnRate = Math.max(freeChurnRate * (1 - (churnImprovement * yearsElapsed)), 0.02);
+            
+            const churnedPremium = Math.round(currentPremiumUsers * currentPaidChurnRate);
+            const churnedFree = Math.round(currentFreeUsers * currentFreeChurnRate);
+
+            currentPremiumUsers -= churnedPremium;
+            currentFreeUsers -= churnedFree;
+            
+            // 2. GROWTH: Calculate new users based on the post-churn MAU
+            const mauBeforeGrowth = currentPremiumUsers + currentFreeUsers;
+            const growthRate = growthRates[Math.min(year, 3)] || growthRates[3];
+            const newUsers = Math.round(mauBeforeGrowth * growthRate);
+            
+            // Add new users to the free tier
+            currentFreeUsers += newUsers;
+            
+            // 3. CONVERSION: Convert free users to paid
+            let monthlyRevenue = 0;
+            const currentConversionRate = Math.min(initialConversion * (1 + (conversionGrowth * yearsElapsed)), 0.50);
+            
+            if (enableTieredPricing) {
+                // Tiered model conversion
+                const basicConversion = getVal('basicConversion') / 100;
+                const proConversion = getVal('proConversion') / 100;
+                
+                const newBasic = Math.round(currentFreeUsers * basicConversion);
+                tierUserCounts['Basic'] = (tierUserCounts['Basic'] || 0) + newBasic;
+                currentPremiumUsers += newBasic;
+                currentFreeUsers -= newBasic;
+                totalUsersAcquired += newBasic;
+
+                const newPro = Math.round(currentFreeUsers * proConversion);
+                tierUserCounts['Pro'] = (tierUserCounts['Pro'] || 0) + newPro;
+                currentPremiumUsers += newPro;
+                currentFreeUsers -= newPro;
+                totalUsersAcquired += newPro;
+
+                const basicPrice = getVal('basicPrice');
+                const proPrice = getVal('proPrice');
+                monthlyRevenue += (tierUserCounts['Basic'] || 0) * basicPrice;
+                monthlyRevenue += (tierUserCounts['Pro'] || 0) * proPrice;
+
+            } else {
+                const newPremiumUsers = Math.round(currentFreeUsers * currentConversionRate);
+                currentPremiumUsers += newPremiumUsers;
+                currentFreeUsers -= newPremiumUsers;
+                totalUsersAcquired += newPremiumUsers;
+                
+                const monthlyUsers = Math.round(currentPremiumUsers * (1 - annualPlanPercentage));
+                const annualUsers = currentPremiumUsers - monthlyUsers;
+                monthlyRevenue = (monthlyUsers * appPrice) + (annualUsers * (annualPrice / 12));
+            }
+
+            // Update total MAU at the end of all movements
+            const finalMAUForMonth = currentPremiumUsers + currentFreeUsers;
+
+            // B2B Revenue
+            if (timelineMonth >= b2bStartMonth) {
+                monthlyRevenue += monthlyRevenue * b2bPercentage;
+            }
+            
+            // Costs
+            const baseTeamCost = teamCosts[Math.min(year, 3)] || teamCosts[3];
+            const baseTechCost = techCosts[Math.min(year, 3)] || techCosts[3];
+            const baseMarketingCost = marketingCosts[Math.min(year, 3)] || marketingCosts[3];
+
+            // Check for monthly overrides from the modal editor
+            const customMonthTeamCost = monthlyCustomCosts[`team_${timelineMonth}`];
+            const customMonthTechCost = monthlyCustomCosts[`tech_${timelineMonth}`];
+            const customMonthMarketingCost = monthlyCustomCosts[`marketing_${timelineMonth}`];
+
+            let monthlyTeamCost = customMonthTeamCost !== undefined ? customMonthTeamCost : baseTeamCost;
+            let monthlyTechCost = customMonthTechCost !== undefined ? customMonthTechCost : baseTechCost;
+            let monthlyMarketingCost = customMonthMarketingCost !== undefined ? customMonthMarketingCost : baseMarketingCost;
+            
+            let monthlyVariableCosts = 0;
+            if (enableVariableCosts) {
+                const costPerUser = getVal('costPerUser');
+                const supportCostPerUser = getVal('supportCostPerUser');
+                monthlyVariableCosts = (currentFreeUsers * costPerUser) + (currentPremiumUsers * supportCostPerUser);
+            }
+
+            const monthlyCosts = monthlyTeamCost + monthlyTechCost + monthlyMarketingCost + monthlyVariableCosts;
+            const netIncome = monthlyRevenue - monthlyCosts;
+
+            cashBalance += netIncome;
+            totalRevenue += monthlyRevenue;
+            totalCosts += monthlyCosts;
+
+            if (netIncome > 0 && breakEvenMonth === null) {
+                breakEvenMonth = timelineMonth;
+            }
+
+            monthlyData.push({
+                month: timelineMonth,
+                isBeta: false,
+                mau: finalMAUForMonth, growthRate: growthRate, freeUsers: currentFreeUsers,
+                premiumUsers: currentPremiumUsers,
+                basicUsers: tierUserCounts['Basic'] || 0,
+                proUsers: tierUserCounts['Pro'] || 0,
+                enterpriseUsers: 0,
+                conversionRate: currentConversionRate,
+                monthlyRevenue,
+                arr: monthlyRevenue * 12,
+                teamCost: monthlyTeamCost,
+                techCost: monthlyTechCost,
+                marketingCost: monthlyMarketingCost,
+                variableCosts: monthlyVariableCosts,
+                monthlyCosts, netIncome,
+            });
         }
         
-        // Check if Enterprise tier is enabled
-        const isEnterpriseEnabled = document.getElementById('enableEnterpriseTier').checked;
-        const enterpriseColumn = isEnterpriseEnabled ? `<td>${enterpriseUsers.toLocaleString()}</td>` : '';
+        console.log("Calculation loop finished. Final month data:", monthlyData[monthlyData.length-1]);
+
+        // Final Metrics Calculation
+        const finalData = monthlyData[monthlyData.length - 1] || {};
+        const finalARR = finalData.arr || 0;
+        const netProfit = totalRevenue - totalCosts;
+
+        const avgPaidChurn = paidChurnRate; 
+        const avgLifespan = avgPaidChurn > 0 ? 1 / avgPaidChurn : 0;
+        const avgMonthlyRevenue = currentPremiumUsers > 0 ? totalRevenue / monthlyData.reduce((acc, d) => acc + d.premiumUsers, 0) : 0;
+        const ltv = avgMonthlyRevenue * avgLifespan;
+        const cac = totalUsersAcquired > 0 ? totalCosts / totalUsersAcquired : 0;
+        const ltvCacRatio = cac > 0 ? (ltv / cac).toFixed(1) + ':1' : 'N/A';
+        const exitValuation = finalARR * valuationMultiple;
+        const investorReturn = exitValuation * equityOffered;
+        const returnMultiple = seedInvestment > 0 ? (investorReturn / seedInvestment).toFixed(1) + 'x' : 'N/A';
+        const finalCashBalance = finalData.cashBalance || 0;
+        const monthlyBurn = monthlyData.length > 1 ? (monthlyData[monthlyData.length - 2].cashBalance - finalCashBalance) : 0;
+        const runway = monthlyBurn > 0 ? Math.floor(finalCashBalance / monthlyBurn) : 'Profitable';
+
+        // NEW: Consolidate all results into a single summary object with REAL data
+        const summaryData = {
+            finalMAU: finalData?.mau || 0,
+            finalARR: finalARR || 0,
+            breakEvenMonth: breakEvenMonth ? `Month ${breakEvenMonth}` : 'Not Reached',
+            exitValuation: exitValuation || 0,
+            investorReturn: `${formatCurrency(investorReturn || 0)} (${returnMultiple})`,
+            totalRevenue: totalRevenue || 0,
+            totalCosts: totalCosts || 0,
+            netProfit: netProfit || 0,
+            ltvCacRatio: ltvCacRatio || 'N/A',
+            customerLTV: ltv || 0,
+            monthlyARPU: avgMonthlyRevenue || 0,
+            customerCAC: cac || 0,
+            runway: runway || 0,
+            currentBurnRate: monthlyBurn || 0,
+            parameters: parameters || {},
+            costBreakdown: {}, // This can be populated with more detailed year-by-year costs if needed
+            cacBreakdown: {
+                totalMarketingCosts: totalCosts, // Simplified: using total costs for now
+                salesOverhead: 0, // Placeholder
+                totalAcquisitionCosts: totalCosts, // Simplified
+                totalUsersAcquired: totalUsersAcquired || 0,
+                averageCAC: cac || 0
+            },
+            // Placeholders for future advanced analytics data
+            tieredRevenueData: {}, 
+            cohortData: {}, 
+            variableCostData: {}, 
+            fundingData: {}
+        };
         
-        // Calculate actual monthly conversion rate: (paid users) / MAU
-        const totalPaidUsers = basicUsers + proUsers + enterpriseUsers;
-        const actualConversionRate = data.mau > 0 ? (totalPaidUsers / data.mau) : 0;
+        console.log('📊 Summary data created:', summaryData);
+
+        // NEW: Centralized call to display results
+        displayResults(monthlyData, summaryData, isManualTrigger);
         
-        row.innerHTML = `
-            <td>${data.month}${data.month === 12 ? ' (Year 1)' : data.month === 24 ? ' (Year 2)' : data.month === 36 ? ' (Year 3)' : data.month === 48 ? ' (Year 4)' : data.month === 60 ? ' (Year 5)' : ''}</td>
-            <td>${data.mau.toLocaleString()}</td>
-            <td>${(data.growthRate * 100).toFixed(0)}%</td>
-            <td style="color: #4ade80;">${freeUsers.toLocaleString()}</td>
-            <td style="color: #667eea;">${basicUsers.toLocaleString()}</td>
-            <td style="color: #a855f7;">${proUsers.toLocaleString()}</td>
-            ${enterpriseColumn}
-            <td>${(actualConversionRate * 100).toFixed(1)}%</td>
-            <td>${formatCurrency(data.monthlyRevenue)}</td>
-            <td>${formatCurrency(data.arr)}</td>
-            <td>${formatCurrency(data.teamCost)}</td>
-            <td>${formatCurrency(data.techCost)}</td>
-            <td>${formatCurrency(data.marketingCost)}</td>
-            <td>${formatCurrency(data.variableCosts || 0)}</td>
-            <td>${formatCurrency(data.monthlyCosts)}</td>
-            <td class="${data.netIncome >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netIncome)}</td>
-        `;
-    });
-    
-    // Update chart
-    updateChart(monthlyData);
-    
-    const outputSection = document.getElementById('outputSection');
-    if (outputSection) {
-        outputSection.style.display = 'block';
+        console.log('✅ Projections calculated and displayed.');
+
+    } catch (error) {
+        console.error("❌ An error occurred during projection calculation:", error);
+        const outputSection = document.getElementById('outputSection');
+        if (outputSection) {
+            outputSection.innerHTML = `<div class="card" style="border-color: #ef4444; color: #ef4444;"><h2>Calculation Error</h2><p>Something went wrong. Please check your inputs or refresh the page. Error: ${error.message}</p></div>`;
+            outputSection.style.display = 'block';
+        }
     }
-    document.getElementById('parameters-summary-card').style.display = 'block';
 }
 
+// Initialize the app when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 NutriSnap Financial Forecast loading...');
+    
+    // Set default values and initialize UI components
+    document.querySelectorAll('input[type="range"]').forEach(slider => updateSliderValue(slider));
+    updateAnnualPrice();
+    
+    // Add event listeners to all inputs to recalculate on change
+    const inputs = document.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        // Only auto-calculate for specific non-disruptive inputs
+        if (input.type === 'range') {
+            input.addEventListener('input', () => {
+                updateSliderValue(input);
+                // Don't auto-calculate to avoid scroll interruption
+            });
+        }
+        // Remove auto-calculation on change to prevent user interruption
+        // User must click "Calculate Projections" button to run calculations
+    });
+
+    console.log('✅ App initialized. Ready for calculations.');
+    // Don't run initial calculation on load - user will click button
+});
+
 function updateCostBreakdown(yearCosts) {
+    console.log('🏗️ Updating cost breakdown with:', yearCosts);
     const container = document.getElementById('costBreakdownContent');
     if (!container) return; // Add null check
     
@@ -904,20 +607,21 @@ function updateCostBreakdown(yearCosts) {
                 </h4>
                 <div class="cost-item">
                     <span class="cost-label">Team Costs
-                        ${hasEscalations ? '<span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
+                        ${hasEscalations ? '<span style="color: #667eea; font-size: 0.7rem; margin-left: 5px; background: #1a1a1a; padding: 2px 6px; border-radius: 3px;">📈 Auto-Calculated</span><span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
                     </span>
                     <span class="cost-value">${formatCurrency(costs.team)} total (avg ${formatCurrency(avgMonthlyTeam)}/mo)</span>
                 </div>
                 <div class="cost-item">
                     <span class="cost-label">Tech Costs
-                        ${hasEscalations ? '<span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
+                        ${hasEscalations ? '<span style="color: #667eea; font-size: 0.7rem; margin-left: 5px; background: #1a1a1a; padding: 2px 6px; border-radius: 3px;">📈 Auto-Calculated</span><span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
                     </span>
                     <span class="cost-value">${formatCurrency(costs.tech)} total (avg ${formatCurrency(avgMonthlyTech)}/mo)</span>
                 </div>
                 <div class="cost-item">
                     <span class="cost-label">Marketing Costs
-                        ${hasMarketingPhases ? '<span class="info-icon" style="color: #f59e0b;">?</span><span class="tooltip">Uses marketing campaign phases instead of baseline costs</span>' : 
-                          hasEscalations ? '<span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
+                        ${hasMarketingPhases ? 
+                            '<span style="color: #667eea; font-size: 0.7rem; margin-left: 5px; background: #1a1a1a; padding: 2px 6px; border-radius: 3px;">📈 Auto-Calculated</span><span class="info-icon" style="color: #f59e0b;">?</span><span class="tooltip">Uses marketing campaign phases instead of baseline costs</span>' : 
+                            hasEscalations ? '<span class="info-icon" style="color: #667eea;">?</span><span class="tooltip">Includes cost escalations and baseline adjustments</span>' : ''}
                     </span>
                     <span class="cost-value">${formatCurrency(costs.marketing)} total (avg ${formatCurrency(avgMonthlyMarketing)}/mo)</span>
                 </div>
@@ -943,31 +647,31 @@ function updateCostBreakdown(yearCosts) {
 }
 
 function updateCACBreakdown(metrics, avgMonthlyRevenue) {
-    document.getElementById('totalMarketingCosts').textContent = formatCurrency(metrics.totalMarketingCosts);
-    document.getElementById('salesOverhead').textContent = formatCurrency(metrics.salesOverhead);
-    document.getElementById('totalAcquisitionCosts').textContent = formatCurrency(metrics.totalAcquisitionCosts);
-    document.getElementById('totalUsersAcquiredDisplay').textContent = metrics.totalUsersAcquired.toLocaleString();
-    document.getElementById('averageCACDisplay').textContent = formatCurrency(metrics.averageCAC);
+    const setTxt = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        } else {
+            console.warn(`Element with ID '${id}' not found for CAC breakdown.`);
+        }
+    };
+
+    // Ensure metrics object exists and has defaults
+    const safeMetrics = metrics || {};
+    const totalMarketing = safeMetrics.totalMarketingCosts || 0;
+    const salesOverhead = safeMetrics.salesOverhead || 0;
+    const totalAcquisition = safeMetrics.totalAcquisitionCosts || 0;
+    const totalUsers = safeMetrics.totalUsersAcquired || 0;
+    const averageCAC = safeMetrics.averageCAC || 0;
+
+    setTxt('totalMarketingCosts', formatCurrency(totalMarketing));
+    setTxt('salesOverhead', formatCurrency(salesOverhead));
+    setTxt('totalAcquisitionCosts', formatCurrency(totalAcquisition));
+    setTxt('totalUsersAcquiredDisplay', totalUsers.toLocaleString());
+    setTxt('averageCACDisplay', formatCurrency(averageCAC));
     
-    // Calculate payback period
-    const paybackPeriod = avgMonthlyRevenue > 0 ? Math.round(metrics.averageCAC / avgMonthlyRevenue) : 0;
-    document.getElementById('paybackPeriod').textContent = paybackPeriod + ' months';
-    
-    // Add validation warnings for CAC
-    const cacElement = document.getElementById('averageCACDisplay');
-    if (metrics.averageCAC < 10) {
-        cacElement.style.color = '#f87171';
-        cacElement.title = 'Warning: CAC < £10 is unrealistically low unless you have viral growth';
-    } else if (metrics.averageCAC > 300) {
-        cacElement.style.color = '#f87171';
-        cacElement.title = 'Warning: CAC > £300 may be unsustainable for most SaaS businesses';
-    } else if (paybackPeriod > 12) {
-        cacElement.style.color = '#fbbf24';
-        cacElement.title = 'Caution: Payback period > 12 months requires strong unit economics';
-    } else {
-        cacElement.style.color = '#4ade80';
-        cacElement.title = 'CAC appears realistic for SaaS business';
-    }
+    const paybackPeriod = avgMonthlyRevenue > 0 ? Math.round(averageCAC / avgMonthlyRevenue) : 0;
+    setTxt('paybackPeriod', paybackPeriod + ' months');
 }
 
 function updateChart(data) {
@@ -1189,43 +893,58 @@ function loadScenario(scenario) {
     };
     
     const s = scenarios[scenario];
-    if (s) {
-        document.getElementById('appPrice').value = s.appPrice;
-        document.getElementById('year1Growth').value = s.year1Growth;
-        document.getElementById('year2Growth').value = s.year2Growth;
-        document.getElementById('year3Growth').value = s.year3Growth;
-        document.getElementById('year4Growth').value = s.year4Growth;
-        document.getElementById('year5Growth').value = s.year5Growth;
-        document.getElementById('initialConversion').value = s.initialConversion;
-        document.getElementById('conversionGrowth').value = s.conversionGrowth;
-        document.getElementById('churnRate').value = s.churnRate;
-        document.getElementById('churnImprovement').value = s.churnImprovement;
-        document.getElementById('annualDiscount').value = s.annualDiscount;
-        document.getElementById('annualPlanPercentage').value = s.annualPlanPercentage;
-        document.getElementById('b2bStartMonth').value = s.b2bStartMonth;
-        document.getElementById('b2bPercentage').value = s.b2bPercentage;
-        document.getElementById('teamCostY1').value = s.teamCostY1;
-        document.getElementById('teamCostY2').value = s.teamCostY2;
-        document.getElementById('teamCostY3').value = s.teamCostY3;
-        document.getElementById('techCostY1').value = s.techCostY1;
-        document.getElementById('techCostY2').value = s.techCostY2;
-        document.getElementById('techCostY3').value = s.techCostY3;
-        document.getElementById('marketingCostY1').value = s.marketingCostY1;
-        document.getElementById('marketingCostY2').value = s.marketingCostY2;
-        document.getElementById('marketingCostY3').value = s.marketingCostY3;
-        document.getElementById('equityOffered').value = s.equityOffered;
-        document.getElementById('valuationMultiple').value = s.valuationMultiple;
-        
-        // Update all slider displays
-        const sliders = document.querySelectorAll('input[type="range"]');
-        sliders.forEach(slider => updateSliderValue(slider));
-        
-        // Update annual price
-        updateAnnualPrice();
-        
-        // Auto-calculate
-        calculateProjections();
-    }
+    if (!s) return;
+
+    const setVal = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = value;
+        } else {
+            console.warn(`Element with ID '${id}' not found for scenario loading.`);
+        }
+    };
+
+    setVal('appPrice', s.appPrice);
+    setVal('annualDiscount', s.annualDiscount);
+    setVal('annualPlanPercentage', s.annualPlanPercentage);
+    setVal('startingMAU', s.startingMAU);
+    
+    setVal('year1Growth', s.year1Growth);
+    setVal('year2Growth', s.year2Growth);
+    setVal('year3Growth', s.year3Growth);
+    
+    setVal('initialConversion', s.initialConversion);
+    setVal('conversionGrowth', s.conversionGrowth);
+    setVal('churnRate', s.churnRate); // Paid churn
+    setVal('freeChurnRate', s.freeChurnRate); // Free churn
+    setVal('churnImprovement', s.churnImprovement);
+    
+    setVal('b2bStartMonth', s.b2bStartMonth);
+    setVal('b2bPercentage', s.b2bPercentage);
+
+    setVal('teamCostY1', s.teamCostY1);
+    setVal('teamCostY2', s.teamCostY2);
+    setVal('teamCostY3', s.teamCostY3);
+
+    setVal('techCostY1', s.techCostY1);
+    setVal('techCostY2', s.techCostY2);
+    setVal('techCostY3', s.techCostY3);
+
+    setVal('marketingCostY1', s.marketingCostY1);
+    setVal('marketingCostY2', s.marketingCostY2);
+    setVal('marketingCostY3', s.marketingCostY3);
+
+    setVal('seedInvestment', s.seedInvestment);
+    setVal('equityOffered', s.equityOffered);
+    setVal('valuationMultiple', s.valuationMultiple);
+
+    // Update all slider display values
+    document.querySelectorAll('input[type="range"]').forEach(slider => updateSliderValue(slider));
+    
+    updateAnnualPrice();
+    // Don't auto-calculate to avoid user interruption
+    
+    console.log(`👍 Loaded '${scenario}' scenario.`);
 }
 
 function updateAnnualCostDisplays() {
@@ -1247,7 +966,12 @@ function updateAnnualCostDisplays() {
 }
 
 function updateCostStructureVisibility() {
-    const projectionMonths = parseInt(document.getElementById('projectionMonths').value);
+    const projectionPeriodEl = document.getElementById('projectionPeriod');
+    if (!projectionPeriodEl) {
+        console.warn('⚠️ projectionPeriod element not found, skipping cost structure visibility update');
+        return;
+    }
+    const projectionMonths = parseInt(projectionPeriodEl.value) || 36;
     const projectionYears = Math.ceil(projectionMonths / 12);
 
     // Show/hide cost structure years
@@ -1270,60 +994,61 @@ function updateCostStructureVisibility() {
     ];
     
     growthInputs.forEach(({ id, year }) => {
-        const inputGroup = document.querySelector(`#${id}`).closest('.input-group');
-        if (inputGroup) {
-            inputGroup.style.display = year <= projectionYears ? 'block' : 'none';
+        const inputElement = document.querySelector(`#${id}`);
+        if (inputElement) {
+            const inputGroup = inputElement.closest('.input-group');
+            if (inputGroup) {
+                inputGroup.style.display = year <= projectionYears ? 'block' : 'none';
+            }
         }
     });
 }
 
 function populateParametersSummary(params) {
     const container = document.getElementById('parametersSummaryContent');
+    if (!container) return;
+
+    // Helper to safely get values and format them
+    const getParam = (value, unit = '', decimals = 0) => {
+        if (value === undefined || value === null) return 'N/A';
+        return `${Number(value).toFixed(decimals)}${unit}`;
+    };
     
-    // Build growth parameters dynamically based on available years
+    const getPercent = (value) => {
+        if (value === undefined || value === null) return 'N/A';
+        return `${(Number(value) * 100).toFixed(1)}%`;
+    };
+
+    // Build growth parameters dynamically
     let growthHTML = '';
-    Object.keys(params.growthRates).forEach(year => {
-        growthHTML += `<div class="param-item"><span class="param-label">Year ${year} Growth</span><span class="param-value">${(params.growthRates[year] * 100).toFixed(0)}%/mo</span></div>`;
-    });
-    
+    if (params.growthRates) {
+        Object.keys(params.growthRates).forEach(year => {
+            growthHTML += `<div class="param-item"><span class="param-label">Year ${year} Growth</span><span class="param-value">${getPercent(params.growthRates[year])}/mo</span></div>`;
+        });
+    }
+
     // Build pricing section based on tiered vs single pricing
     let pricingHTML = '';
-    const isTieredPricingEnabled = document.getElementById('enableTieredPricing')?.checked;
-    
-    if (isTieredPricingEnabled) {
-        const activeTiers = getActiveTiers();
-        pricingHTML = `<div class="param-item"><span class="param-label">Pricing Model</span><span class="param-value">Tiered Pricing</span></div>`;
-        
-        // Show all active tier prices
-        activeTiers.forEach(tier => {
-            pricingHTML += `<div class="param-item"><span class="param-label">${tier.name} Tier Price</span><span class="param-value">${formatCurrency(tier.price)}</span></div>`;
-        });
-        
-        // Show conversion rates for each tier
-        activeTiers.forEach(tier => {
-            pricingHTML += `<div class="param-item"><span class="param-label">${tier.name} Conversion</span><span class="param-value">${(tier.conversionRate * 100).toFixed(1)}%</span></div>`;
-        });
+    if (params.enableTieredPricing) {
+        pricingHTML = `
+            <div class="param-item"><span class="param-label">Pricing Model</span><span class="param-value">Tiered Pricing</span></div>
+            <div class="param-item"><span class="param-label">Basic Tier Price</span><span class="param-value">${formatCurrency(params.basicPrice || 0)}</span></div>
+            <div class="param-item"><span class="param-label">Basic Conversion</span><span class="param-value">${getParam(params.basicConversion, '%')}</span></div>
+            <div class="param-item"><span class="param-label">Pro Tier Price</span><span class="param-value">${formatCurrency(params.proPrice || 0)}</span></div>
+            <div class="param-item"><span class="param-label">Pro Conversion</span><span class="param-value">${getParam(params.proConversion, '%')}</span></div>
+        `;
     } else {
-        pricingHTML = `<div class="param-item"><span class="param-label">Monthly Price</span><span class="param-value">${formatCurrency(params.appPrice)}</span></div>`;
+        pricingHTML = `<div class="param-item"><span class="param-label">Monthly Price</span><span class="param-value">${formatCurrency(params.appPrice || 0)}</span></div>`;
     }
-    
+
     container.innerHTML = `
         <div class="param-group">
-            <h4>Beta Development Period (Months 0-2)</h4>
-            <div class="param-item"><span class="param-label">Month 0 Beta Users</span><span class="param-value">${params.betaUsersM0.toLocaleString()}</span></div>
-            <div class="param-item"><span class="param-label">Month 1 Beta Users</span><span class="param-value">${params.betaUsersM1.toLocaleString()}</span></div>
-            <div class="param-item"><span class="param-label">Month 2 Beta Users</span><span class="param-value">${params.betaUsersM2.toLocaleString()}</span></div>
-            <div class="param-item"><span class="param-label">Month 0 Total Costs</span><span class="param-value">${formatCurrency(params.betaTeamCostM0 + params.betaTechCostM0 + params.betaMarketingCostM0)}</span></div>
-            <div class="param-item"><span class="param-label">Month 1 Total Costs</span><span class="param-value">${formatCurrency(params.betaTeamCostM1 + params.betaTechCostM1 + params.betaMarketingCostM1)}</span></div>
-            <div class="param-item"><span class="param-label">Month 2 Total Costs</span><span class="param-value">${formatCurrency(params.betaTeamCostM2 + params.betaTechCostM2 + params.betaMarketingCostM2)}</span></div>
-        </div>
-        <div class="param-group">
-            <h4>Revenue (App Launch Month 1+)</h4>
+            <h4>Revenue Parameters</h4>
             ${pricingHTML}
-            <div class="param-item"><span class="param-label">Annual Discount</span><span class="param-value">${(params.annualDiscount * 100).toFixed(0)}%</span></div>
-            <div class="param-item"><span class="param-label">Annual Plan Uptake</span><span class="param-value">${(params.annualPlanPercentage * 100).toFixed(0)}%</span></div>
-            <div class="param-item"><span class="param-label">Month 1 Launch MAU</span><span class="param-value">${params.startingMAU.toLocaleString()}</span></div>
-            <div class="param-item"><span class="param-label">Projection Period</span><span class="param-value">${params.projectionMonths} months</span></div>
+            <div class="param-item"><span class="param-label">Annual Discount</span><span class="param-value">${getPercent(params.annualDiscount)}</span></div>
+            <div class="param-item"><span class="param-label">Annual Plan Uptake</span><span class="param-value">${getPercent(params.annualPlanPercentage)}</span></div>
+            <div class="param-item"><span class="param-label">Launch MAU</span><span class="param-value">${(params.startingMAU || 0).toLocaleString()}</span></div>
+            <div class="param-item"><span class="param-label">Projection Period</span><span class="param-value">${getParam(params.projectionMonths, ' months')}</span></div>
         </div>
         <div class="param-group">
             <h4>Growth</h4>
@@ -1331,18 +1056,28 @@ function populateParametersSummary(params) {
         </div>
         <div class="param-group">
             <h4>Conversion & Retention</h4>
-            ${!isTieredPricingEnabled ? `
-            <div class="param-item"><span class="param-label">Initial Conversion</span><span class="param-value">${(params.initialConversion * 100).toFixed(1)}%</span></div>
-            <div class="param-item"><span class="param-label">Conversion Growth</span><span class="param-value">${(params.conversionGrowth * 100).toFixed(2)}%/yr</span></div>` : ''}
-            <div class="param-item"><span class="param-label">Free User Churn</span><span class="param-value">${(params.freeChurnRate * 100).toFixed(1)}%/mo</span></div>
-            <div class="param-item"><span class="param-label">Paid User Churn</span><span class="param-value">${(params.paidChurnRate * 100).toFixed(1)}%/mo</span></div>
-            <div class="param-item"><span class="param-label">Churn Improvement</span><span class="param-value">${(params.churnImprovement * 100).toFixed(2)}%/yr</span></div>
+            ${!params.enableTieredPricing ? `
+            <div class="param-item"><span class="param-label">Initial Conversion</span><span class="param-value">${getPercent(params.initialConversion)}</span></div>
+            <div class="param-item"><span class="param-label">Conversion Growth</span><span class="param-value">${getPercent(params.conversionGrowth)}/yr</span></div>` : ''}
+            <div class="param-item"><span class="param-label">Free User Churn</span><span class="param-value">${getPercent(params.freeChurnRate)}/mo</span></div>
+            <div class="param-item"><span class="param-label">Paid User Churn</span><span class="param-value">${getPercent(params.paidChurnRate)}/mo</span></div>
+            <div class="param-item"><span class="param-label">Churn Improvement</span><span class="param-value">${getPercent(params.churnImprovement)}/yr</span></div>
         </div>
         <div class="param-group">
             <h4>Investment</h4>
-            <div class="param-item"><span class="param-label">Seed Investment</span><span class="param-value">${formatCurrency(params.seedInvestment)}</span></div>
-            <div class="param-item"><span class="param-label">Equity Offered</span><span class="param-value">${(params.equityOffered * 100).toFixed(1)}%</span></div>
-            <div class="param-item"><span class="param-label">Exit Multiple</span><span class="param-value">${params.valuationMultiple}x ARR</span></div>
+            <div class="param-item"><span class="param-label">Seed Investment</span><span class="param-value">${formatCurrency(params.seedInvestment || 0)}</span></div>
+            <div class="param-item"><span class="param-label">Equity Offered</span><span class="param-value">${getPercent(params.equityOffered)}</span></div>
+            <div class="param-item"><span class="param-label">Exit Multiple</span><span class="param-value">${getParam(params.valuationMultiple, 'x ARR', 1)}</span></div>
+        </div>
+        <div class="param-group">
+            <h4>Beta Development Period (Months 0-2)</h4>
+            <div class="param-item"><span class="param-label">Month 0 Users/Costs</span><span class="param-value">${(params.betaUsersM0 || 0).toLocaleString()} / ${formatCurrency(params.betaTeamCostM0 + params.betaTechCostM0 + params.betaMarketingCostM0)}</span></div>
+            <div class="param-item"><span class="param-label">Month 1 Users/Costs</span><span class="param-value">${(params.betaUsersM1 || 0).toLocaleString()} / ${formatCurrency(params.betaTeamCostM1 + params.betaTechCostM1 + params.betaMarketingCostM1)}</span></div>
+            <div class="param-item"><span class="param-label">Month 2 Users/Costs</span><span class="param-value">${(params.betaUsersM2 || 0).toLocaleString()} / ${formatCurrency(params.betaTeamCostM2 + params.betaTechCostM2 + params.betaMarketingCostM2)}</span></div>
+        </div>
+        <div class="param-group">
+            <h4>Revenue Parameters (Post-Beta)</h4>
+            ${pricingHTML}
         </div>
     `;
 }
@@ -1422,7 +1157,7 @@ function exportToPDF() {
         let currentY = margin;
 
         // Get actual projection period
-        const projectionMonths = parseInt(getInputValue('projectionMonths')) || 36;
+        const projectionMonths = parseInt(getInputValue('projectionPeriod')) || 36;
         const projectionYears = Math.ceil(projectionMonths / 12);
 
             const checkPageBreak = (spaceNeeded = 20, keepTogether = false) => {
@@ -2226,6 +1961,10 @@ function getCurrentProjectionData() {
             supportCostPerUser: getElementValue('supportCostPerUser', '2'),
             infraScaling: getElementValue('infraScaling', '0.85'),
             
+            // Cohort Tracking Parameters (if enabled)
+            retentionDecay: getElementValue('retentionDecay', '0.5'),
+            cohortLtvMultiplier: getElementValue('cohortLtvMultiplier', '1.1'),
+            
             // Multiple Funding Rounds (if enabled)
             seriesAMonth: getElementValue('seriesAMonth', '18'),
             seriesAAmount: getElementValue('seriesAAmount', '1000000'),
@@ -2243,12 +1982,27 @@ function getCurrentProjectionData() {
             launchPhaseStart: getElementValue('launchPhaseStart', '1'),
             launchPhaseEnd: getElementValue('launchPhaseEnd', '6'),
             launchPhaseBudget: getElementValue('launchPhaseBudget', '1500'),
+            launchStrategy: getElementValue('launchStrategy', 'custom'),
             growthPhaseStart: getElementValue('growthPhaseStart', '7'),
             growthPhaseEnd: getElementValue('growthPhaseEnd', '18'),
             growthPhaseBudget: getElementValue('growthPhaseBudget', '3000'),
+            growthStrategy: getElementValue('growthStrategy', 'custom'),
             scalePhaseStart: getElementValue('scalePhaseStart', '19'),
             scalePhaseEnd: getElementValue('scalePhaseEnd', '60'),
-            scalePhaseBudget: getElementValue('scalePhaseBudget', '5000')
+            scalePhaseBudget: getElementValue('scalePhaseBudget', '5000'),
+            scaleStrategy: getElementValue('scaleStrategy', 'custom'),
+            betaUsersM0: getInt('betaUsersM0'),
+            betaTeamCostM0: getVal('betaTeamCostM0'),
+            betaTechCostM0: getVal('betaTechCostM0'),
+            betaMarketingCostM0: getVal('betaMarketingCostM0'),
+            betaUsersM1: getInt('betaUsersM1'),
+            betaTeamCostM1: getVal('betaTeamCostM1'),
+            betaTechCostM1: getVal('betaTechCostM1'),
+            betaMarketingCostM1: getVal('betaMarketingCostM1'),
+            betaUsersM2: getInt('betaUsersM2'),
+            betaTeamCostM2: getVal('betaTeamCostM2'),
+            betaTechCostM2: getVal('betaTechCostM2'),
+            betaMarketingCostM2: getVal('betaMarketingCostM2'),
         };
     } catch (error) {
         console.error('Error getting projection data:', error);
@@ -2354,6 +2108,14 @@ function loadProjection(projectionId) {
     // Load Advanced Features
     document.getElementById('enableTieredPricing').checked = data.enableTieredPricing || false;
     document.getElementById('enableCohortTracking').checked = data.enableCohortTracking || false;
+    
+    // Load Cohort Tracking Parameters
+    if (document.getElementById('retentionDecay')) {
+        document.getElementById('retentionDecay').value = data.retentionDecay || '0.5';
+    }
+    if (document.getElementById('cohortLtvMultiplier')) {
+        document.getElementById('cohortLtvMultiplier').value = data.cohortLtvMultiplier || '1.1';
+    }
     document.getElementById('enableVariableCosts').checked = data.enableVariableCosts || false;
     document.getElementById('enableMultipleRounds').checked = data.enableMultipleRounds || false;
     
@@ -2443,6 +2205,10 @@ function loadProjection(projectionId) {
     if (document.getElementById('launchPhaseBudget')) {
         document.getElementById('launchPhaseBudget').value = data.launchPhaseBudget || '1500';
     }
+    if (document.getElementById('launchStrategy')) {
+        document.getElementById('launchStrategy').value = data.launchStrategy || 'custom';
+        applyMarketingStrategy('launch');
+    }
     if (document.getElementById('growthPhaseStart')) {
         document.getElementById('growthPhaseStart').value = data.growthPhaseStart || '7';
     }
@@ -2451,6 +2217,10 @@ function loadProjection(projectionId) {
     }
     if (document.getElementById('growthPhaseBudget')) {
         document.getElementById('growthPhaseBudget').value = data.growthPhaseBudget || '3000';
+    }
+    if (document.getElementById('growthStrategy')) {
+        document.getElementById('growthStrategy').value = data.growthStrategy || 'custom';
+        applyMarketingStrategy('growth');
     }
     if (document.getElementById('scalePhaseStart')) {
         document.getElementById('scalePhaseStart').value = data.scalePhaseStart || '19';
@@ -2461,15 +2231,16 @@ function loadProjection(projectionId) {
     if (document.getElementById('scalePhaseBudget')) {
         document.getElementById('scalePhaseBudget').value = data.scalePhaseBudget || '5000';
     }
+    if (document.getElementById('scaleStrategy')) {
+        document.getElementById('scaleStrategy').value = data.scaleStrategy || 'custom';
+        applyMarketingStrategy('scale');
+    }
 
     // Update displays and toggle sections
-    updateSliderValue(document.getElementById('annualPlanPercentage'));
-    updateSliderValue(document.getElementById('equityOffered'));
-    updateSliderValue(document.getElementById('valuationMultiple'));
     updateAnnualPrice();
     updateAnnualCostDisplays();
     
-    // Toggle advanced feature sections
+    // Toggle advanced feature sections FIRST (to ensure all elements are visible)
     toggleTieredPricing();
     toggleCohortTracking();
     toggleVariableCosts();
@@ -2480,10 +2251,36 @@ function loadProjection(projectionId) {
     // Display loaded cost escalations
     displayCostEscalations();
     
+    // Wait for all sections to be visible, then update ALL sliders
+    setTimeout(() => {
+        const allSliders = document.querySelectorAll('input[type="range"]');
+        console.log(`🎚️ Updating ${allSliders.length} sliders after loading projection`);
+        
+        allSliders.forEach(slider => {
+            if (slider && slider.id) {
+                console.log(`🔄 Updating slider: ${slider.id} = ${slider.value}`);
+                updateSliderValue(slider);
+            }
+        });
+        
+        // Force visibility check for growth parameters based on projection period
+        updateCostStructureVisibility();
+        
+        // Final slider update for any newly visible elements
+        setTimeout(() => {
+            const finalSliders = document.querySelectorAll('input[type="range"]');
+            finalSliders.forEach(slider => {
+                if (slider && slider.id) {
+                    updateSliderValue(slider);
+                }
+            });
+            console.log('✅ All sliders updated after projection load');
+        }, 200);
+    }, 150);
+    
     alert(`Projection "${projection.name}" loaded successfully!`);
     
-    // Auto-calculate if we have data
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function deleteProjection(projectionId) {
@@ -2652,54 +2449,42 @@ function clearAllProjections() {
 function toggleTieredPricing() {
     const enabled = document.getElementById('enableTieredPricing').checked;
     const section = document.getElementById('tieredPricingSection');
-    const analysis = document.getElementById('tieredRevenueAnalysis');
     
-    section.style.display = enabled ? 'block' : 'none';
-    analysis.style.display = enabled ? 'block' : 'none';
-    
-    if (enabled) {
-        document.getElementById('advancedAnalytics').style.display = 'block';
-        // Initialize tier toggles
-        updateTiersGridLayout();
-    } else {
-        updateAdvancedAnalyticsVisibility();
+    if (section) {
+        section.style.display = enabled ? 'block' : 'none';
+        console.log('Tiered pricing section toggled:', enabled ? 'visible' : 'hidden');
+        
+        if (enabled) {
+            // Initialize tier toggles and grid layout
+            updateTiersGridLayout();
+        }
     }
     
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function toggleCohortTracking() {
     const enabled = document.getElementById('enableCohortTracking').checked;
     const section = document.getElementById('cohortTrackingSection');
-    const analysis = document.getElementById('cohortAnalysis');
     
-    section.style.display = enabled ? 'block' : 'none';
-    analysis.style.display = enabled ? 'block' : 'none';
-    
-    if (enabled) {
-        document.getElementById('advancedAnalytics').style.display = 'block';
-    } else {
-        updateAdvancedAnalyticsVisibility();
+    if (section) {
+        section.style.display = enabled ? 'block' : 'none';
+        console.log('Cohort tracking section toggled:', enabled ? 'visible' : 'hidden');
     }
     
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function toggleVariableCosts() {
     const enabled = document.getElementById('enableVariableCosts').checked;
     const section = document.getElementById('variableCostsSection');
-    const analysis = document.getElementById('variableCostAnalysis');
     
-    section.style.display = enabled ? 'block' : 'none';
-    analysis.style.display = enabled ? 'block' : 'none';
-    
-    if (enabled) {
-        document.getElementById('advancedAnalytics').style.display = 'block';
-    } else {
-        updateAdvancedAnalyticsVisibility();
+    if (section) {
+        section.style.display = enabled ? 'block' : 'none';
+        console.log('Variable costs section toggled:', enabled ? 'visible' : 'hidden');
     }
     
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function toggleMultipleRounds() {
@@ -2707,26 +2492,35 @@ function toggleMultipleRounds() {
     const section = document.getElementById('multipleRoundsSection');
     const analysis = document.getElementById('fundingRoundsAnalysis');
     
-    section.style.display = enabled ? 'block' : 'none';
-    analysis.style.display = enabled ? 'block' : 'none';
+    if (section) section.style.display = enabled ? 'block' : 'none';
+    if (analysis) analysis.style.display = enabled ? 'block' : 'none';
     
     if (enabled) {
-        document.getElementById('advancedAnalytics').style.display = 'block';
+        const advancedAnalytics = document.getElementById('advancedAnalytics');
+        if (advancedAnalytics) advancedAnalytics.style.display = 'block';
     } else {
         updateAdvancedAnalyticsVisibility();
     }
     
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function updateAdvancedAnalyticsVisibility() {
-    const hasTiered = document.getElementById('enableTieredPricing').checked;
-    const hasCohort = document.getElementById('enableCohortTracking').checked;
-    const hasVariable = document.getElementById('enableVariableCosts').checked;
-    const hasMultiple = document.getElementById('enableMultipleRounds').checked;
+    const tieredEl = document.getElementById('enableTieredPricing');
+    const cohortEl = document.getElementById('enableCohortTracking');
+    const variableEl = document.getElementById('enableVariableCosts');
+    const multipleEl = document.getElementById('enableMultipleRounds');
+    const analyticsEl = document.getElementById('advancedAnalytics');
+    
+    const hasTiered = tieredEl ? tieredEl.checked : false;
+    const hasCohort = cohortEl ? cohortEl.checked : false;
+    const hasVariable = variableEl ? variableEl.checked : false;
+    const hasMultiple = multipleEl ? multipleEl.checked : false;
     
     const showAdvanced = hasTiered || hasCohort || hasVariable || hasMultiple;
-    document.getElementById('advancedAnalytics').style.display = showAdvanced ? 'block' : 'none';
+    if (analyticsEl) {
+        analyticsEl.style.display = showAdvanced ? 'block' : 'none';
+    }
 }
 
 // Individual tier visibility control
@@ -2734,17 +2528,18 @@ function toggleTierVisibility(tier) {
     const checkbox = document.getElementById(`enable${tier.charAt(0).toUpperCase() + tier.slice(1)}Tier`);
     const section = document.getElementById(`${tier}TierSection`);
     
-    if (checkbox.checked) {
-        section.style.display = 'block';
-    } else {
-        section.style.display = 'none';
+    if (checkbox && section) {
+        if (checkbox.checked) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+        
+        // Update grid layout based on visible tiers
+        updateTiersGridLayout();
     }
     
-    // Update grid layout based on visible tiers
-    updateTiersGridLayout();
-    
-    // Recalculate projections when tiers change
-    calculateProjections();
+    // Don't auto-calculate to avoid user interruption
 }
 
 function updateTiersGridLayout() {
@@ -3253,8 +3048,24 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSliderValue(slider);
     });
     
-    // Run initial calculation
-    calculateProjections();
+    // Initialize marketing strategy previews
+    setTimeout(() => {
+        applyMarketingStrategy('launch');
+        applyMarketingStrategy('growth');
+        applyMarketingStrategy('scale');
+    }, 100);
+    
+    // Initialize unified cost management
+    switchCostTab('base'); // Start with base costs tab
+    
+    // Auto-populate cost structure if enabled
+    if (document.getElementById('enableAutoCostCalculation')?.checked) {
+        setTimeout(() => {
+            autoPopulateCostStructure();
+        }, 100); // Small delay to ensure all elements are loaded
+    }
+    
+    // Don't run initial calculation - user will click button
 });
 
 // Initialize on page load (fallback)
@@ -3263,7 +3074,7 @@ window.onload = function() {
     updateAnnualCostDisplays();
     updateCostStructureVisibility();
     displaySavedProjections();
-    calculateProjections();
+    // Don't auto-calculate - user will click button
     
     // Set up event listeners for save/load functionality
     const saveBtn = document.querySelector('button[onclick="saveCurrentProjection()"]');
@@ -3371,8 +3182,157 @@ function takeScreenshot() {
 }
 
 // Enhanced Cost Management Functions
-let costEscalations = [];
+// costEscalations already declared at top of file
 let marketingPhases = [];
+
+// Marketing Strategy Templates (already defined above, but with different structure)
+// Using the enhanced version for cost management
+const enhancedMarketingStrategies = {
+    // Launch Phase Strategies
+    launch_blitz: {
+        name: "Launch Blitz",
+        description: "High initial spend for maximum visibility, then taper off",
+        pattern: "exponential_decay",
+        multipliers: [2.5, 2.0, 1.5, 1.2, 1.0, 0.8],
+        bestFor: "New product launches, building initial awareness"
+    },
+    gradual_ramp: {
+        name: "Gradual Ramp-Up", 
+        description: "Start conservative, increase as you learn what works",
+        pattern: "exponential_growth",
+        multipliers: [0.3, 0.5, 0.7, 1.0, 1.3, 1.5],
+        bestFor: "Testing markets, budget-conscious startups"
+    },
+    consistent_burn: {
+        name: "Consistent Burn",
+        description: "Steady spending for predictable results",
+        pattern: "flat",
+        multipliers: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        bestFor: "Established channels, predictable ROI"
+    },
+    viral_focus: {
+        name: "Viral Focus",
+        description: "Minimal paid spend, focus on viral/organic growth",
+        pattern: "viral_curve",
+        multipliers: [0.2, 0.3, 0.6, 1.2, 2.0, 1.5],
+        bestFor: "Social-first products, community-driven growth"
+    },
+    event_driven: {
+        name: "Event-Driven",
+        description: "Spike around events, launches, or seasonal periods",
+        pattern: "spike_pattern",
+        multipliers: [1.5, 0.8, 2.2, 0.7, 1.8, 1.0],
+        bestFor: "Product launches, seasonal businesses"
+    },
+    
+    // Growth Phase Strategies
+    performance_scale: {
+        name: "Performance Scale",
+        description: "Double down on proven channels, data-driven scaling",
+        pattern: "compound_growth",
+        multipliers: [0.8, 1.0, 1.3, 1.6, 2.0, 2.2],
+        bestFor: "Proven PMF, strong unit economics"
+    },
+    channel_diversify: {
+        name: "Channel Diversification",
+        description: "Spread budget across multiple channels to reduce risk",
+        pattern: "diversified",
+        multipliers: [1.0, 1.1, 0.9, 1.2, 0.8, 1.3],
+        bestFor: "Reducing channel dependence, testing new channels"
+    },
+    content_amplify: {
+        name: "Content Amplification",
+        description: "Heavy investment in content marketing and distribution",
+        pattern: "content_curve",
+        multipliers: [0.7, 1.0, 1.4, 1.7, 1.9, 1.8],
+        bestFor: "B2B SaaS, education platforms, long sales cycles"
+    },
+    partnership_focus: {
+        name: "Partnership Focus",
+        description: "Invest in partnerships, integrations, co-marketing",
+        pattern: "partnership_ramp",
+        multipliers: [0.6, 0.8, 1.2, 1.5, 1.8, 2.1],
+        bestFor: "B2B platforms, marketplace businesses"
+    },
+    retention_boost: {
+        name: "Retention + Acquisition",
+        description: "Balanced spend on getting and keeping customers",
+        pattern: "balanced_growth",
+        multipliers: [1.0, 1.2, 1.1, 1.4, 1.3, 1.5],
+        bestFor: "High churn businesses, subscription models"
+    },
+    
+    // Scale Phase Strategies
+    market_domination: {
+        name: "Market Domination",
+        description: "Aggressive spending to capture market share",
+        pattern: "aggressive_scale",
+        multipliers: [1.2, 1.5, 1.8, 2.2, 2.5, 2.8],
+        bestFor: "Winner-take-all markets, strong funding"
+    },
+    efficiency_focus: {
+        name: "Efficiency Focus",
+        description: "Optimize for lower CAC, focus on profitability",
+        pattern: "efficiency_curve",
+        multipliers: [1.0, 0.9, 0.8, 0.7, 0.8, 0.9],
+        bestFor: "Path to profitability, mature markets"
+    },
+    brand_building: {
+        name: "Brand Building",
+        description: "Long-term brand investment, premium positioning",
+        pattern: "brand_curve",
+        multipliers: [1.1, 1.3, 1.2, 1.4, 1.3, 1.5],
+        bestFor: "Premium products, long-term competitive advantage"
+    },
+    global_expansion: {
+        name: "Global Expansion",
+        description: "Geographic expansion, localization investment",
+        pattern: "expansion_waves",
+        multipliers: [1.0, 1.4, 1.1, 1.6, 1.2, 1.8],
+        bestFor: "Proven local success, international opportunity"
+    },
+    lifecycle_optimize: {
+        name: "Lifecycle Optimization",
+        description: "Focus on customer lifetime value optimization",
+        pattern: "lifecycle_curve",
+        multipliers: [0.8, 1.0, 1.2, 1.1, 1.3, 1.4],
+        bestFor: "High LTV businesses, mature customer base"
+    }
+};
+
+// Strategic Marketing Journeys - Coherent strategy paths (already defined above)
+const enhancedMarketingJourneys = {
+    // High-energy launch strategies
+    launch_blitz: {
+        recommendedGrowth: 'performance_scale',
+        recommendedScale: 'market_domination',
+        rationale: 'Build on launch momentum with proven channels, then dominate market'
+    },
+    event_driven: {
+        recommendedGrowth: 'channel_diversify', 
+        recommendedScale: 'brand_building',
+        rationale: 'Diversify beyond events, build sustainable brand presence'
+    },
+    
+    // Conservative launch strategies  
+    gradual_ramp: {
+        recommendedGrowth: 'channel_diversify',
+        recommendedScale: 'efficiency_focus',
+        rationale: 'Test multiple channels, optimize for profitability'
+    },
+    viral_focus: {
+        recommendedGrowth: 'content_amplify',
+        recommendedScale: 'brand_building', 
+        rationale: 'Double down on content, build long-term brand equity'
+    },
+    
+    // Steady launch strategies
+    consistent_burn: {
+        recommendedGrowth: 'performance_scale',
+        recommendedScale: 'lifecycle_optimize',
+        rationale: 'Scale proven channels, optimize customer lifetime value'
+    }
+};
 
 function toggleCostEscalation() {
     const section = document.getElementById('costEscalationSection');
@@ -3442,7 +3402,7 @@ function addCostEscalation() {
 }
 
 function displayCostEscalations() {
-    const container = document.getElementById('escalationList');
+    const container = document.getElementById('costEscalationsList');
     
     if (costEscalations.length === 0) {
         container.innerHTML = '<div style="color: #666; font-style: italic; font-size: 0.85rem;">No cost escalations added yet. Add escalations above to see month-by-month cost changes.</div>';
@@ -3512,10 +3472,178 @@ function removeCostEscalation(index) {
 
 function updateMarketingPhases() {
     // This function is called when marketing phase inputs change
+    // Update cost previews first
+    updateMarketingCostPreviews();
     // Force recalculation to update all displays including cost breakdown
     setTimeout(() => {
         calculateProjections();
     }, 100);
+}
+
+function applyMarketingStrategy(phase) {
+    const strategySelect = document.getElementById(`${phase}Strategy`);
+    const strategy = strategySelect.value;
+    const previewDiv = document.getElementById(`${phase}StrategyPreview`);
+    
+    if (strategy === 'custom') {
+        previewDiv.innerHTML = 'Using custom budget amounts';
+        if (phase === 'launch') {
+            clearJourneyRecommendations();
+        }
+        return;
+    }
+    
+    const strategyData = marketingStrategies[strategy] || enhancedMarketingStrategies[strategy];
+    if (!strategyData) return;
+    
+    // Auto-populate phase parameters based on strategy
+    const phaseTemplates = {
+        launch: {
+            launch_blitz: { start: 1, end: 6, budget: 2500 },
+            gradual_ramp: { start: 1, end: 8, budget: 1200 },
+            consistent_burn: { start: 1, end: 6, budget: 1800 },
+            viral_focus: { start: 1, end: 9, budget: 800 },
+            event_driven: { start: 1, end: 6, budget: 2000 }
+        },
+        growth: {
+            performance_scale: { start: 7, end: 18, budget: 3500 },
+            channel_diversify: { start: 7, end: 20, budget: 3000 },
+            content_amplify: { start: 7, end: 15, budget: 2800 },
+            partnership_focus: { start: 7, end: 18, budget: 3200 },
+            retention_acquisition: { start: 7, end: 24, budget: 3800 }
+        },
+        scale: {
+            market_domination: { start: 19, end: 60, budget: 8000 },
+            efficiency_focus: { start: 19, end: 48, budget: 6500 },
+            brand_building: { start: 19, end: 60, budget: 7500 },
+            global_expansion: { start: 19, end: 60, budget: 9500 },
+            lifecycle_optimization: { start: 19, end: 48, budget: 7000 }
+        }
+    };
+    
+    // Auto-populate input fields if template exists
+    const template = phaseTemplates[phase]?.[strategy];
+    if (template) {
+        const startInput = document.getElementById(`${phase}PhaseStart`);
+        const endInput = document.getElementById(`${phase}PhaseEnd`);
+        const budgetInput = document.getElementById(`${phase}PhaseBudget`);
+        
+        if (startInput) startInput.value = template.start;
+        if (endInput) endInput.value = template.end;
+        if (budgetInput) budgetInput.value = template.budget;
+        
+        console.log(`📈 Applied ${strategy} template to ${phase} phase:`, template);
+    }
+    
+    // Show strategy description and preview
+    previewDiv.innerHTML = `
+        <div style="color: #f59e0b; font-weight: 600; margin-bottom: 3px;">${strategyData.name}</div>
+        <div style="margin-bottom: 3px;">${strategyData.description}</div>
+        <div style="color: #4ade80; font-size: 0.75rem;">Best for: ${strategyData.bestFor}</div>
+        ${template ? '<div style="color: #667eea; font-size: 0.7rem; margin-top: 3px;">📅 Auto-updated months & budget</div>' : ''}
+    `;
+    
+    // Auto-suggest follow-up strategies for launch phase changes
+    if (phase === 'launch' && (marketingJourneys[strategy] || enhancedMarketingJourneys[strategy])) {
+        suggestMarketingJourney(strategy);
+    }
+    
+    // Trigger recalculation and preview updates
+    updateMarketingPhases();
+    updateMarketingCostPreviews();
+    
+    // Update unified cost management
+    updateUnifiedCostManagement();
+}
+
+function suggestMarketingJourney(launchStrategy) {
+    const journey = marketingJourneys[launchStrategy] || enhancedMarketingJourneys[launchStrategy];
+    if (!journey) return;
+    
+    const growthSelect = document.getElementById('growthStrategy');
+    const scaleSelect = document.getElementById('scaleStrategy');
+    const growthPreview = document.getElementById('growthStrategyPreview');
+    const scalePreview = document.getElementById('scaleStrategyPreview');
+    
+    // Only auto-update if they're currently on 'custom' (not overriding user choices)
+    if (growthSelect.value === 'custom') {
+        growthSelect.value = journey.recommendedGrowth;
+        
+        // Apply the strategy AND populate input fields
+        applyMarketingStrategy('growth');
+        
+        // Add suggestion indicator
+        setTimeout(() => {
+            const currentPreview = document.getElementById('growthStrategyPreview');
+            if (currentPreview) {
+                currentPreview.innerHTML += `
+                    <div style="background: #1a1a1a; padding: 6px; border-radius: 3px; margin-top: 5px; border-left: 2px solid #4ade80;">
+                        <div style="color: #4ade80; font-size: 0.75rem; font-weight: 600;">✨ Auto-suggested</div>
+                        <div style="color: #999; font-size: 0.7rem;">Pairs well with ${marketingStrategies[launchStrategy].name}</div>
+                    </div>
+                `;
+            }
+        }, 50);
+    }
+    
+    if (scaleSelect.value === 'custom') {
+        scaleSelect.value = journey.recommendedScale;
+        
+        // Apply the strategy AND populate input fields
+        applyMarketingStrategy('scale');
+        
+        // Add suggestion indicator  
+        setTimeout(() => {
+            const currentPreview = document.getElementById('scaleStrategyPreview');
+            if (currentPreview) {
+                currentPreview.innerHTML += `
+                    <div style="background: #1a1a1a; padding: 6px; border-radius: 3px; margin-top: 5px; border-left: 2px solid #4ade80;">
+                        <div style="color: #4ade80; font-size: 0.75rem; font-weight: 600;">✨ Auto-suggested</div>
+                        <div style="color: #999; font-size: 0.7rem;">Completes the journey</div>
+                    </div>
+                `;
+            }
+        }, 50);
+    }
+    
+    // Show journey rationale at the bottom of marketing phases section
+    showJourneyRationale(launchStrategy, journey.rationale);
+    
+    console.log(`🧭 Applied marketing journey for ${launchStrategy}:`, {
+        growth: journey.recommendedGrowth,
+        scale: journey.recommendedScale
+    });
+}
+
+function clearJourneyRecommendations() {
+    // Remove journey rationale if it exists
+    const journeyRationale = document.getElementById('journeyRationale');
+    if (journeyRationale) {
+        journeyRationale.remove();
+    }
+}
+
+function showJourneyRationale(strategy, rationale) {
+    // Remove existing rationale
+    clearJourneyRecommendations();
+    
+    // Add journey explanation
+    const marketingSection = document.getElementById('marketingPhasesSection');
+    const rationaleDiv = document.createElement('div');
+    rationaleDiv.id = 'journeyRationale';
+    rationaleDiv.innerHTML = `
+        <div style="background: #0f1419; padding: 12px; border-radius: 6px; margin-top: 15px; border: 1px solid #333;">
+            <div style="color: #667eea; font-weight: 600; margin-bottom: 5px; display: flex; align-items: center;">
+                <span style="margin-right: 8px;">🧭</span>
+                Strategic Marketing Journey: ${marketingStrategies[strategy].name}
+            </div>
+            <div style="color: #ccc; font-size: 0.85rem; margin-bottom: 8px;">${rationale}</div>
+            <div style="color: #999; font-size: 0.75rem;">
+                💡 These suggestions can be customized at any time using the dropdowns above
+            </div>
+        </div>
+    `;
+    marketingSection.appendChild(rationaleDiv);
 }
 
 function getMarketingBudgetForMonth(month) {
@@ -3526,24 +3654,59 @@ function getMarketingBudgetForMonth(month) {
     const launchStart = parseInt(document.getElementById('launchPhaseStart').value) || 1;
     const launchEnd = parseInt(document.getElementById('launchPhaseEnd').value) || 6;
     const launchBudget = parseFloat(document.getElementById('launchPhaseBudget').value) || 0;
+    const launchStrategy = document.getElementById('launchStrategy')?.value || 'custom';
     
     const growthStart = parseInt(document.getElementById('growthPhaseStart').value) || 7;
     const growthEnd = parseInt(document.getElementById('growthPhaseEnd').value) || 18;
     const growthBudget = parseFloat(document.getElementById('growthPhaseBudget').value) || 0;
+    const growthStrategy = document.getElementById('growthStrategy')?.value || 'custom';
     
     const scaleStart = parseInt(document.getElementById('scalePhaseStart').value) || 19;
     const scaleEnd = parseInt(document.getElementById('scalePhaseEnd').value) || 60;
     const scaleBudget = parseFloat(document.getElementById('scalePhaseBudget').value) || 0;
+    const scaleStrategy = document.getElementById('scaleStrategy')?.value || 'custom';
+    
+    let baseBudget = 0;
+    let strategy = 'custom';
+    let phaseStart = 0;
+    let phaseEnd = 0;
     
     if (month >= launchStart && month <= launchEnd) {
-        return launchBudget;
+        baseBudget = launchBudget;
+        strategy = launchStrategy;
+        phaseStart = launchStart;
+        phaseEnd = launchEnd;
     } else if (month >= growthStart && month <= growthEnd) {
-        return growthBudget;
+        baseBudget = growthBudget;
+        strategy = growthStrategy;
+        phaseStart = growthStart;
+        phaseEnd = growthEnd;
     } else if (month >= scaleStart && month <= scaleEnd) {
-        return scaleBudget;
+        baseBudget = scaleBudget;
+        strategy = scaleStrategy;
+        phaseStart = scaleStart;
+        phaseEnd = scaleEnd;
+    } else {
+        return 0;
     }
     
-    return 0; // Default if month doesn't fall in any phase
+    // Apply strategy multiplier if not custom
+    if (strategy !== 'custom' && marketingStrategies[strategy]) {
+        const strategyData = marketingStrategies[strategy];
+        const phaseLength = phaseEnd - phaseStart + 1;
+        const monthInPhase = month - phaseStart;
+        
+        // Calculate which multiplier to use based on position in phase
+        const multiplierIndex = Math.min(
+            Math.floor((monthInPhase / phaseLength) * strategyData.multipliers.length),
+            strategyData.multipliers.length - 1
+        );
+        
+        const multiplier = strategyData.multipliers[multiplierIndex];
+        return Math.round(baseBudget * multiplier);
+    }
+    
+    return baseBudget;
 }
 
 function applyCostEscalations(baseTeamCost, baseTechCost, baseMarketingCost, month) {
@@ -3577,5 +3740,918 @@ function applyCostEscalations(baseTeamCost, baseTechCost, baseMarketingCost, mon
         techCost: Math.max(0, adjustedTechCost),
         marketingCost: Math.max(0, adjustedMarketingCost)
     };
+}
+
+// Add debugging function at the top after updateSliderValue
+function debugCostUpdate(source, values) {
+    console.log(`🔧 Cost update triggered by: ${source}`, values);
+}
+
+// Add immediate cost structure update function
+function updateCostStructureRealTime() {
+    // Auto-populate cost structure input fields if enabled
+    if (document.getElementById('enableAutoCostCalculation')?.checked) {
+        autoPopulateCostStructure();
+    }
+    // Force immediate calculation and update
+    setTimeout(() => {
+        calculateProjections();
+    }, 50); // Small delay to ensure input values are updated
+}
+
+// Auto-populate cost structure input fields based on beta period and advanced settings
+function autoPopulateCostStructure() {
+    // Get beta period costs for baseline calculation
+    const betaTeamCostM0 = parseFloat(document.getElementById('betaTeamCostM0').value) || 0;
+    const betaTeamCostM1 = parseFloat(document.getElementById('betaTeamCostM1').value) || 0;
+    const betaTeamCostM2 = parseFloat(document.getElementById('betaTeamCostM2').value) || 0;
+    
+    const betaTechCostM0 = parseFloat(document.getElementById('betaTechCostM0').value) || 0;
+    const betaTechCostM1 = parseFloat(document.getElementById('betaTechCostM1').value) || 0;
+    const betaTechCostM2 = parseFloat(document.getElementById('betaTechCostM2').value) || 0;
+    
+    const betaMarketingCostM0 = parseFloat(document.getElementById('betaMarketingCostM0').value) || 0;
+    const betaMarketingCostM1 = parseFloat(document.getElementById('betaMarketingCostM1').value) || 0;
+    const betaMarketingCostM2 = parseFloat(document.getElementById('betaMarketingCostM2').value) || 0;
+    
+    // Calculate average beta costs as baseline for Year 1
+    const avgBetaTeamCost = (betaTeamCostM0 + betaTeamCostM1 + betaTeamCostM2) / 3;
+    const avgBetaTechCost = (betaTechCostM0 + betaTechCostM1 + betaTechCostM2) / 3;
+    const avgBetaMarketingCost = (betaMarketingCostM0 + betaMarketingCostM1 + betaMarketingCostM2) / 3;
+    
+    // Auto-populate Year 1 based on beta period with growth factor
+    const year1TeamCost = Math.round(avgBetaTeamCost * 1.2); // 20% growth from beta to production
+    const year1TechCost = Math.round(avgBetaTechCost * 1.5); // 50% growth for scaling infrastructure
+    
+    // Marketing cost depends on whether marketing phases are enabled
+    let year1MarketingCost;
+    if (document.getElementById('enableMarketingPhases')?.checked) {
+        // Calculate average marketing cost from launch phase
+        const launchStart = parseInt(document.getElementById('launchPhaseStart').value) || 1;
+        const launchEnd = parseInt(document.getElementById('launchPhaseEnd').value) || 6;
+        const launchBudget = parseFloat(document.getElementById('launchPhaseBudget').value) || 0;
+        const launchStrategy = document.getElementById('launchStrategy')?.value || 'custom';
+        
+        if (launchStrategy !== 'custom' && marketingStrategies[launchStrategy]) {
+            // Calculate average cost with strategy multipliers
+            let totalCost = 0;
+            let monthCount = 0;
+            for (let month = launchStart; month <= Math.min(launchEnd, 12); month++) {
+                totalCost += getMarketingBudgetForMonth(month);
+                monthCount++;
+            }
+            year1MarketingCost = monthCount > 0 ? Math.round(totalCost / monthCount) : launchBudget;
+        } else {
+            year1MarketingCost = launchBudget;
+        }
+    } else {
+        year1MarketingCost = Math.round(avgBetaMarketingCost * 2); // 100% growth for marketing scale-up
+    }
+    
+    // Auto-populate Year 2 and Year 3 with scaling factors
+    const year2TeamCost = Math.round(year1TeamCost * 1.8); // Team scaling
+    const year2TechCost = Math.round(year1TechCost * 4); // Tech infrastructure scaling
+    const year2MarketingCost = Math.round(year1MarketingCost * 3.5); // Marketing expansion
+    
+    const year3TeamCost = Math.round(year2TeamCost * 1.5); // Continued team growth
+    const year3TechCost = Math.round(year2TechCost * 2.2); // Advanced tech needs
+    const year3MarketingCost = Math.round(year2MarketingCost * 2); // Market expansion
+    
+    // Update the input fields with auto-calculated values
+    updateCostInputWithIndicator('teamCostY1', year1TeamCost);
+    updateCostInputWithIndicator('teamCostY2', year2TeamCost);
+    updateCostInputWithIndicator('teamCostY3', year3TeamCost);
+    
+    updateCostInputWithIndicator('techCostY1', year1TechCost);
+    updateCostInputWithIndicator('techCostY2', year2TechCost);
+    updateCostInputWithIndicator('techCostY3', year3TechCost);
+    
+    updateCostInputWithIndicator('marketingCostY1', year1MarketingCost);
+    updateCostInputWithIndicator('marketingCostY2', year2MarketingCost);
+    updateCostInputWithIndicator('marketingCostY3', year3MarketingCost);
+    
+    // Update annual displays
+    updateAnnualCostDisplays();
+}
+
+// Update cost input field with auto-calculated indicator
+function updateCostInputWithIndicator(inputId, value) {
+    const input = document.getElementById(inputId);
+    const container = input?.closest('.cost-year-1, .cost-year-2, .cost-year-3');
+    
+    if (!input || !container) return;
+    
+    // Update the input value
+    input.value = value;
+    
+    // Add or update auto-calculated indicator
+    let indicator = container.querySelector('.auto-calc-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'auto-calc-indicator';
+        container.appendChild(indicator);
+    }
+    
+    indicator.innerHTML = `
+        <span style="color: #667eea; font-size: 0.7rem; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; margin-top: 3px; display: inline-block;">
+            📈 Auto-Calculated
+        </span>
+    `;
+    
+    // Add highlighting to the input to show it's auto-calculated
+    input.style.borderLeft = '3px solid #667eea';
+    input.style.backgroundColor = '#1a1a2e';
+}
+
+// Toggle auto-cost calculation
+function toggleAutoCostCalculation() {
+    const isEnabled = document.getElementById('enableAutoCostCalculation').checked;
+    
+    if (isEnabled) {
+        autoPopulateCostStructure();
+        console.log('🎯 Auto-cost calculation enabled - fields updated');
+    } else {
+        // Remove auto-calculated indicators
+        document.querySelectorAll('.auto-calc-indicator').forEach(indicator => {
+            indicator.remove();
+        });
+        
+        // Reset input styling
+        document.querySelectorAll('#teamCostY1, #teamCostY2, #teamCostY3, #techCostY1, #techCostY2, #techCostY3, #marketingCostY1, #marketingCostY2, #marketingCostY3').forEach(input => {
+            input.style.borderLeft = '';
+            input.style.backgroundColor = '';
+        });
+        
+        console.log('🎯 Auto-cost calculation disabled - indicators removed');
+    }
+}
+
+// Unified Cost Management System
+function switchCostTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.cost-tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.cost-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    let targetTab;
+    switch(tabName) {
+        case 'base':
+            targetTab = document.getElementById('baseCostsTab');
+            const baseTabEl = document.getElementById('baseTab');
+            if (baseTabEl) baseTabEl.classList.add('active');
+            break;
+        case 'escalations':
+            targetTab = document.getElementById('escalationsTab');
+            const escalationsTabEl = document.getElementById('escalationsTab');
+            if (escalationsTabEl) escalationsTabEl.classList.add('active');
+            if (typeof displayCostEscalations === 'function') displayCostEscalations();
+            break;
+        case 'marketing':
+            targetTab = document.getElementById('marketingCampaignsTab');
+            const marketingTabEl = document.getElementById('marketingTab');
+            if (marketingTabEl) marketingTabEl.classList.add('active');
+            break;
+        case 'preview':
+            targetTab = document.getElementById('livePreviewTab');
+            const previewTabEl = document.getElementById('previewTab');
+            if (previewTabEl) previewTabEl.classList.add('active');
+            if (typeof updateLivePreview === 'function') updateLivePreview();
+            break;
+    }
+    
+    if (targetTab) {
+        targetTab.style.display = 'block';
+    }
+    
+    console.log(`💰 Switched to ${tabName} cost management tab`);
+}
+
+function updateUnifiedCostManagement() {
+    // Update annual displays
+    updateAnnualCostDisplays();
+    
+    // Auto-populate if enabled
+    if (document.getElementById('enableAutoCostCalculation')?.checked) {
+        autoPopulateCostStructure();
+    }
+    
+    // Update live preview if it's visible
+    if (document.getElementById('livePreviewTab').style.display !== 'none') {
+        updateLivePreview();
+    }
+    
+    // Force immediate calculation
+    setTimeout(() => {
+        calculateProjections();
+    }, 50);
+}
+
+function updateLivePreview() {
+    const previewContainer = document.getElementById('livePreviewContent');
+    if (!previewContainer) return;
+    
+    const projectionMonths = parseInt(document.getElementById('projectionMonths').value) || 36;
+    const maxPreviewMonths = Math.min(projectionMonths, 24); // Show first 24 months
+    
+    let previewHTML = '<h4 style="color: #8b5cf6; margin-bottom: 15px;">📊 Monthly Cost Breakdown (First ' + maxPreviewMonths + ' Months)</h4>';
+    
+    // Get base costs
+    const teamCostY1 = parseFloat(document.getElementById('teamCostY1').value) || 0;
+    const techCostY1 = parseFloat(document.getElementById('techCostY1').value) || 0;
+    const marketingCostY1 = parseFloat(document.getElementById('marketingCostY1').value) || 0;
+    
+    for (let month = 1; month <= maxPreviewMonths; month++) {
+        // Calculate actual costs with escalations and marketing phases
+        const finalCosts = applyCostEscalations(teamCostY1, techCostY1, marketingCostY1, month);
+        const totalCost = finalCosts.teamCost + finalCosts.techCost + finalCosts.marketingCost;
+        
+        // Check if marketing phases override
+        const marketingOverride = getMarketingBudgetForMonth(month);
+        const finalMarketingCost = marketingOverride !== null ? marketingOverride : finalCosts.marketingCost;
+        const adjustedTotal = finalCosts.teamCost + finalCosts.techCost + finalMarketingCost;
+        
+        previewHTML += `
+            <div class="live-preview-month">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #8b5cf6;">Month ${month}</span>
+                    <span style="font-weight: 700; color: #fff;">Total: £${adjustedTotal.toLocaleString()}</span>
+                </div>
+                <div class="live-preview-costs">
+                    <div class="live-preview-cost-item">
+                        <div class="live-preview-cost-label">Team</div>
+                        <div class="live-preview-cost-value">£${finalCosts.teamCost.toLocaleString()}</div>
+                    </div>
+                    <div class="live-preview-cost-item">
+                        <div class="live-preview-cost-label">Tech</div>
+                        <div class="live-preview-cost-value">£${finalCosts.techCost.toLocaleString()}</div>
+                    </div>
+                    <div class="live-preview-cost-item">
+                        <div class="live-preview-cost-label">Marketing</div>
+                        <div class="live-preview-cost-value" style="color: ${marketingOverride !== null ? '#10b981' : '#fff'}">
+                            £${finalMarketingCost.toLocaleString()}
+                            ${marketingOverride !== null ? '<div style="font-size: 0.6rem; color: #10b981;">Campaign</div>' : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (maxPreviewMonths < projectionMonths) {
+        previewHTML += `
+            <div style="text-align: center; padding: 20px; color: #999; font-style: italic;">
+                ... and ${projectionMonths - maxPreviewMonths} more months
+            </div>
+        `;
+    }
+    
+    previewContainer.innerHTML = previewHTML;
+}
+
+// Add function to show marketing campaign cost previews
+function updateMarketingCostPreviews() {
+    if (!document.getElementById('enableMarketingPhases')?.checked) {
+        return;
+    }
+    
+    const phases = [
+        { id: 'launch', start: 'launchPhaseStart', end: 'launchPhaseEnd', budget: 'launchPhaseBudget', strategy: 'launchStrategy' },
+        { id: 'growth', start: 'growthPhaseStart', end: 'growthPhaseEnd', budget: 'growthPhaseBudget', strategy: 'growthStrategy' },
+        { id: 'scale', start: 'scalePhaseStart', end: 'scalePhaseEnd', budget: 'scalePhaseBudget', strategy: 'scaleStrategy' }
+    ];
+    
+    phases.forEach(phase => {
+        const previewDiv = document.getElementById(`${phase.id}CostPreview`);
+        if (!previewDiv) return;
+        
+        const startMonth = parseInt(document.getElementById(phase.start)?.value) || 1;
+        const endMonth = parseInt(document.getElementById(phase.end)?.value) || 6;
+        const baseBudget = parseFloat(document.getElementById(phase.budget)?.value) || 0;
+        const strategy = document.getElementById(phase.strategy)?.value || 'custom';
+        
+        if (strategy === 'custom') {
+            previewDiv.innerHTML = `
+                <div style="background: #1a1a1a; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                    <div style="color: #f59e0b; font-size: 0.75rem; font-weight: 600;">💰 Cost Preview</div>
+                    <div style="color: #ccc; font-size: 0.8rem;">£${baseBudget.toLocaleString()}/month for ${endMonth - startMonth + 1} months</div>
+                    <div style="color: #4ade80; font-size: 0.75rem;">Total: £${(baseBudget * (endMonth - startMonth + 1)).toLocaleString()}</div>
+                </div>
+            `;
+        } else {
+            // Calculate strategy-based costs
+            const strategyData = marketingStrategies[strategy];
+            if (strategyData) {
+                let totalCost = 0;
+                let maxCost = 0;
+                let minCost = Infinity;
+                
+                for (let month = startMonth; month <= endMonth; month++) {
+                    const cost = getMarketingBudgetForMonth(month);
+                    totalCost += cost;
+                    maxCost = Math.max(maxCost, cost);
+                    minCost = Math.min(minCost, cost);
+                }
+                
+                previewDiv.innerHTML = `
+                    <div style="background: #1a1a1a; padding: 8px; border-radius: 4px; margin-top: 5px; border-left: 2px solid #667eea;">
+                        <div style="color: #667eea; font-size: 0.75rem; font-weight: 600;">📈 Auto-Calculated Costs</div>
+                        <div style="color: #ccc; font-size: 0.8rem;">
+                            Range: £${minCost.toLocaleString()} - £${maxCost.toLocaleString()}/month
+                        </div>
+                        <div style="color: #4ade80; font-size: 0.75rem; font-weight: 600;">
+                            Total Phase: £${totalCost.toLocaleString()}
+                        </div>
+                        <div style="color: #999; font-size: 0.7rem; margin-top: 2px;">
+                            ${strategyData.name} multipliers applied
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    });
+}
+
+// Granular Cost Management Hub Functions
+// monthlyCustomCosts already declared at top of file
+let currentEditMonth = 1;
+
+function initializeCostManagementHub() {
+    const monthSelector = document.getElementById('monthSelector');
+    if (!monthSelector) return;
+    
+    // Populate month selector
+    monthSelector.innerHTML = '';
+    for (let i = 1; i <= 36; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Month ${i}`;
+        if (i === 1) option.selected = true;
+        monthSelector.appendChild(option);
+    }
+    
+    // Initialize first month
+    updateMonthEditor();
+    updateCostTimeline();
+}
+
+function updateMonthEditor() {
+    const monthSelector = document.getElementById('monthSelector');
+    if (!monthSelector) return;
+    
+    currentEditMonth = parseInt(monthSelector.value);
+    
+    // Update month label
+    const label = document.getElementById('currentMonthLabel');
+    if (label) label.textContent = currentEditMonth;
+    
+    // Load month data or defaults
+    const monthData = monthlyCustomCosts[currentEditMonth] || getDefaultMonthCosts(currentEditMonth);
+    
+    // Populate inputs
+    const inputs = {
+        'monthTeamBase': monthData.teamBase,
+        'monthTeamEscalation': monthData.teamEscalation,
+        'monthTeamBonus': monthData.teamBonus,
+        'monthTechBase': monthData.techBase,
+        'monthTechEscalation': monthData.techEscalation,
+        'monthTechScaling': monthData.techScaling,
+        'monthMarketingBase': monthData.marketingBase,
+        'monthMarketingMultiplier': monthData.marketingMultiplier,
+        'monthMarketingAB': monthData.marketingAB,
+        'monthNotes': monthData.notes || ''
+    };
+    
+    for (const [id, value] of Object.entries(inputs)) {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+    }
+    
+    // Update totals
+    updateMonthTotals();
+    updateMonthStats();
+}
+
+function getDefaultMonthCosts(month) {
+    // Get base costs from main inputs with escalations applied
+    const teamCost = parseFloat(document.getElementById('teamCost')?.value || 6000);
+    const techCost = parseFloat(document.getElementById('techCost')?.value || 400);
+    const marketingCost = parseFloat(document.getElementById('marketingCost')?.value || 1200);
+    
+    // Apply any existing escalations for this month
+    const escalated = applyCostEscalations(teamCost, techCost, marketingCost, month);
+    
+    return {
+        teamBase: escalated.teamCost,
+        teamEscalation: 0,
+        teamBonus: 0,
+        techBase: escalated.techCost,
+        techEscalation: 0,
+        techScaling: 0,
+        marketingBase: escalated.marketingCost,
+        marketingMultiplier: 1.0,
+        marketingAB: 0,
+        notes: ''
+    };
+}
+
+function updateMonthTotals() {
+    // Team total
+    const teamBase = parseFloat(document.getElementById('monthTeamBase')?.value || 0);
+    const teamEscalation = parseFloat(document.getElementById('monthTeamEscalation')?.value || 0);
+    const teamBonus = parseFloat(document.getElementById('monthTeamBonus')?.value || 0);
+    const teamTotal = teamBase + teamEscalation + teamBonus;
+    
+    // Tech total
+    const techBase = parseFloat(document.getElementById('monthTechBase')?.value || 0);
+    const techEscalation = parseFloat(document.getElementById('monthTechEscalation')?.value || 0);
+    const techScaling = parseFloat(document.getElementById('monthTechScaling')?.value || 0);
+    const techTotal = techBase + techEscalation + techScaling;
+    
+    // Marketing total
+    const marketingBase = parseFloat(document.getElementById('monthMarketingBase')?.value || 0);
+    const marketingMultiplier = parseFloat(document.getElementById('monthMarketingMultiplier')?.value || 1);
+    const marketingAB = parseFloat(document.getElementById('monthMarketingAB')?.value || 0);
+    const marketingTotal = (marketingBase * marketingMultiplier) + marketingAB;
+    
+    // Update displays
+    document.getElementById('monthTeamTotal').textContent = teamTotal.toFixed(0);
+    document.getElementById('monthTechTotal').textContent = techTotal.toFixed(0);
+    document.getElementById('monthMarketingTotal').textContent = marketingTotal.toFixed(0);
+    
+    // Save month data
+    monthlyCustomCosts[currentEditMonth] = {
+        teamBase, teamEscalation, teamBonus,
+        techBase, techEscalation, techScaling,
+        marketingBase, marketingMultiplier, marketingAB,
+        notes: document.getElementById('monthNotes')?.value || ''
+    };
+    
+    // Update timeline
+    updateCostTimeline();
+}
+
+function updateMonthStats() {
+    // Calculate projected stats for this month (simplified)
+    const month = currentEditMonth;
+    const mauGrowthRate = parseFloat(document.getElementById('mauGrowthRate')?.value || 15) / 100;
+    const initialMAU = parseFloat(document.getElementById('initialMAU')?.value || 100);
+    const conversionRate = parseFloat(document.getElementById('conversionRate')?.value || 8) / 100;
+    const monthlyPrice = parseFloat(document.getElementById('monthlyPrice')?.value || 9.99);
+    
+    // Basic MAU projection
+    const projectedMAU = Math.round(initialMAU * Math.pow(1 + mauGrowthRate, month - 1));
+    const projectedRevenue = Math.round(projectedMAU * conversionRate * monthlyPrice);
+    
+    // Get total costs from current inputs
+    const teamTotal = parseFloat(document.getElementById('monthTeamTotal')?.textContent || 0);
+    const techTotal = parseFloat(document.getElementById('monthTechTotal')?.textContent || 0);
+    const marketingTotal = parseFloat(document.getElementById('monthMarketingTotal')?.textContent || 0);
+    const totalCosts = teamTotal + techTotal + marketingTotal;
+    
+    const netProfit = projectedRevenue - totalCosts;
+    
+    // Update displays
+    document.getElementById('monthMAU').textContent = projectedMAU.toLocaleString();
+    document.getElementById('monthRevenue').textContent = projectedRevenue.toLocaleString();
+    document.getElementById('monthTotalCosts').textContent = totalCosts.toLocaleString();
+    document.getElementById('monthNetProfit').textContent = netProfit.toLocaleString();
+    document.getElementById('monthNetProfit').style.color = netProfit >= 0 ? '#4ade80' : '#f87171';
+}
+
+function jumpToMonth(month) {
+    const monthSelector = document.getElementById('monthSelector');
+    if (monthSelector) {
+        monthSelector.value = month;
+        updateMonthEditor();
+    }
+}
+
+function copyFromPreviousMonth() {
+    if (currentEditMonth <= 1) {
+        alert('No previous month to copy from!');
+        return;
+    }
+    
+    const previousMonth = monthlyCustomCosts[currentEditMonth - 1];
+    if (!previousMonth) {
+        alert('Previous month has no custom data to copy!');
+        return;
+    }
+    
+    // Copy all values except notes
+    monthlyCustomCosts[currentEditMonth] = {
+        ...previousMonth,
+        notes: monthlyCustomCosts[currentEditMonth]?.notes || ''
+    };
+    
+    updateMonthEditor();
+    alert(`Copied costs from Month ${currentEditMonth - 1} to Month ${currentEditMonth}!`);
+}
+
+function applyToRange() {
+    const startMonth = prompt(`Apply Month ${currentEditMonth} costs to which range? Enter start month:`, currentEditMonth + 1);
+    if (!startMonth) return;
+    
+    const endMonth = prompt(`Enter end month:`, Math.min(parseInt(startMonth) + 11, 36));
+    if (!endMonth) return;
+    
+    const start = parseInt(startMonth);
+    const end = parseInt(endMonth);
+    
+    if (start < 1 || end > 36 || start > end) {
+        alert('Invalid range! Please enter values between 1-36 with start ≤ end.');
+        return;
+    }
+    
+    const currentData = monthlyCustomCosts[currentEditMonth];
+    if (!currentData) {
+        alert('Current month has no data to apply!');
+        return;
+    }
+    
+    // Apply to range
+    for (let month = start; month <= end; month++) {
+        monthlyCustomCosts[month] = { ...currentData };
+    }
+    
+    updateCostTimeline();
+    alert(`Applied Month ${currentEditMonth} costs to Months ${start}-${end}!`);
+}
+
+function resetMonth() {
+    if (!confirm(`Reset Month ${currentEditMonth} to default values?`)) return;
+    
+    delete monthlyCustomCosts[currentEditMonth];
+    updateMonthEditor();
+    alert(`Month ${currentEditMonth} reset to defaults!`);
+}
+
+function saveMonthTemplate() {
+    const templateName = prompt('Save this month as a template with name:', `Template-Month${currentEditMonth}`);
+    if (!templateName) return;
+    
+    const currentData = monthlyCustomCosts[currentEditMonth];
+    if (!currentData) {
+        alert('Current month has no data to save!');
+        return;
+    }
+    
+    // Save to localStorage
+    const templates = JSON.parse(localStorage.getItem('costTemplates') || '{}');
+    templates[templateName] = currentData;
+    localStorage.setItem('costTemplates', JSON.stringify(templates));
+    
+    alert(`Template "${templateName}" saved!`);
+}
+
+function updateCostTimeline() {
+    const timeline = document.getElementById('costTimeline');
+    if (!timeline) return;
+    
+    let html = '<div style="display: flex; gap: 8px; padding: 10px 0; min-width: 800px;">';
+    
+    for (let month = 1; month <= 12; month++) {
+        const monthData = monthlyCustomCosts[month] || getDefaultMonthCosts(month);
+        const totalCost = (monthData.teamBase + monthData.teamEscalation + monthData.teamBonus) +
+                         (monthData.techBase + monthData.techEscalation + monthData.techScaling) +
+                         ((monthData.marketingBase * monthData.marketingMultiplier) + monthData.marketingAB);
+        
+        const isCustom = !!monthlyCustomCosts[month];
+        const isCurrentMonth = month === currentEditMonth;
+        
+        html += `
+            <div onclick="jumpToMonth(${month})" style="
+                min-width: 60px; padding: 8px; text-align: center; border-radius: 4px; cursor: pointer;
+                background: ${isCurrentMonth ? '#667eea' : (isCustom ? '#1a1a1a' : '#0a0a0a')};
+                border: ${isCurrentMonth ? '2px solid #667eea' : (isCustom ? '1px solid #4ade80' : '1px solid #333')};
+                color: ${isCurrentMonth ? '#fff' : '#ccc'};
+                font-size: 0.8rem;
+            ">
+                <div style="font-weight: bold;">M${month}</div>
+                <div style="color: ${isCurrentMonth ? '#fff' : '#999'};">£${Math.round(totalCost/1000)}k</div>
+                ${isCustom ? '<div style="color: #4ade80; font-size: 0.7rem;">●</div>' : ''}
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    timeline.innerHTML = html;
+}
+
+// Enhanced toggle functions - removed duplicates
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for month editor inputs
+    const inputs = [
+        'monthTeamBase', 'monthTeamEscalation', 'monthTeamBonus',
+        'monthTechBase', 'monthTechEscalation', 'monthTechScaling',
+        'monthMarketingBase', 'monthMarketingMultiplier', 'monthMarketingAB'
+    ];
+    
+    inputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', () => {
+                updateMonthTotals();
+                updateMonthStats();
+            });
+        }
+    });
+    
+    // Initialize cost management hub
+    setTimeout(() => {
+        initializeCostManagementHub();
+    }, 100);
+});
+
+// New functions for updated features
+function updateProjectionPeriod() {
+    const period = document.getElementById('projectionPeriod').value;
+    console.log('Projection period updated to:', period + ' months');
+    // Don't auto-calculate to avoid user interruption
+}
+
+function toggleMonthlyTeamCosts() {
+    const section = document.getElementById('monthlyTeamCostsSection');
+    const checkbox = document.getElementById('enableMonthlyTeamCosts');
+    if (section) {
+        section.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+function toggleMonthlyTechCosts() {
+    const section = document.getElementById('monthlyTechCostsSection');
+    const checkbox = document.getElementById('enableMonthlyTechCosts');
+    if (section) {
+        section.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+function toggleMonthlyMarketingCosts() {
+    const section = document.getElementById('monthlyMarketingCostsSection');
+    const checkbox = document.getElementById('enableMonthlyMarketingCosts');
+    if (section) {
+        section.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+function openMonthlyEditor(type) {
+    // Create a modal for detailed monthly cost editing
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.8); z-index: 1000; 
+        display: flex; align-items: center; justify-content: center;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: #1a1a1a; padding: 30px; border-radius: 12px; 
+        max-width: 80%; max-height: 80%; overflow-y: auto;
+        border: 2px solid ${type === 'team' ? '#4ade80' : type === 'tech' ? '#667eea' : '#f59e0b'};
+    `;
+    
+    const projectionPeriod = parseInt(document.getElementById('projectionPeriod')?.value || '36');
+    
+    content.innerHTML = `
+        <h3 style="color: ${type === 'team' ? '#4ade80' : type === 'tech' ? '#667eea' : '#f59e0b'}; margin: 0 0 20px 0;">
+            ${type === 'team' ? '👥 Team' : type === 'tech' ? '🔧 Tech' : '📢 Marketing'} Cost Editor
+        </h3>
+        <p style="color: #ccc; margin-bottom: 20px;">Customize costs for each month (1-${projectionPeriod}):</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto;">
+            ${Array.from({length: projectionPeriod}, (_, i) => `
+                <div style="background: #2a2a2a; padding: 10px; border-radius: 6px;">
+                    <label style="font-size: 0.8rem; color: #ccc;">Month ${i + 1}</label>
+                    <input type="number" id="monthly${type}Cost${i + 1}" 
+                           value="${getDefaultMonthlyCost(type, i + 1)}" 
+                           min="0" step="100"
+                           style="width: 100%; padding: 4px; font-size: 0.9rem; margin-top: 4px;">
+                </div>
+            `).join('')}
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="saveMonthlyEdits('${type}'); this.closest('.fixed').remove();" 
+                    style="background: ${type === 'team' ? '#4ade80' : type === 'tech' ? '#667eea' : '#f59e0b'}; 
+                           color: ${type === 'team' ? '#000' : '#fff'}; border: none; padding: 10px 20px; 
+                           border-radius: 6px; margin-right: 10px; cursor: pointer;">
+                Save Changes
+            </button>
+            <button onclick="this.closest('.fixed').remove();" 
+                    style="background: #666; color: #fff; border: none; padding: 10px 20px; 
+                           border-radius: 6px; cursor: pointer;">
+                Cancel
+            </button>
+        </div>
+    `;
+    
+    modal.className = 'fixed';
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+}
+
+function getDefaultMonthlyCost(type, month) {
+    // Get the yearly baseline and interpolate
+    const year = Math.ceil(month / 12);
+    const costElement = document.getElementById(`${type}CostY${Math.min(year, 3)}`);
+    return costElement ? costElement.value : (type === 'team' ? '5000' : type === 'tech' ? '800' : '1200');
+}
+
+function saveMonthlyEdits(type) {
+    // Save monthly cost overrides
+    console.log(`Saving monthly ${type} cost edits`);
+    // Implementation would store the values for use in calculations
+}
+
+/**
+ * NEW: Centralized function to render all results to the DOM.
+ * This function takes the calculated data and updates all relevant UI components,
+ * ensuring that if calculation succeeds, the display is updated reliably.
+ */
+function displayResults(monthlyData, summaryData, isManualTrigger = false) {
+    console.log('📊 Rendering results...', { summaryData });
+
+    // Ensure global data is set for other functions like export
+    globalMonthlyData = monthlyData;
+    globalSummaryData = summaryData;
+
+    // --- 1. Update Key Summary Metrics ---
+    const getEl = (id) => document.getElementById(id);
+    const setTxt = (id, text) => {
+        const el = getEl(id);
+        if (el) {
+            el.textContent = text || 'N/A';
+        } else {
+            console.warn(`Element with ID '${id}' not found for display.`);
+        }
+    };
+
+    // Safe number formatting with fallbacks
+    const safeToLocaleString = (value) => {
+        if (value === null || value === undefined || isNaN(value)) return '0';
+        return Number(value).toLocaleString();
+    };
+
+    const safeCurrency = (value) => {
+        if (value === null || value === undefined || isNaN(value)) return '£0';
+        return formatCurrency(Number(value));
+    };
+
+    setTxt('finalMAU', safeToLocaleString(summaryData.finalMAU));
+    setTxt('finalARR', safeCurrency(summaryData.finalARR));
+    setTxt('breakEvenMonth', summaryData.breakEvenMonth || 'Not Reached');
+    setTxt('exitValuation', safeCurrency(summaryData.exitValuation));
+    setTxt('investorReturn', summaryData.investorReturn || 'N/A');
+    
+    setTxt('totalRevenue', safeCurrency(summaryData.totalRevenue));
+    setTxt('totalCosts', safeCurrency(summaryData.totalCosts));
+    setTxt('netProfit', safeCurrency(summaryData.netProfit));
+    
+    const netProfitEl = getEl('netProfit');
+    if(netProfitEl && summaryData.netProfit !== undefined) {
+        netProfitEl.classList.toggle('positive', summaryData.netProfit > 0);
+        netProfitEl.classList.toggle('negative', summaryData.netProfit < 0);
+    }
+    
+    setTxt('ltvCacRatio', summaryData.ltvCacRatio || 'N/A');
+    setTxt('customerLTV', safeCurrency(summaryData.customerLTV));
+    setTxt('monthlyARPU', safeCurrency(summaryData.monthlyARPU));
+    setTxt('customerCAC', safeCurrency(summaryData.customerCAC));
+    setTxt('runway', `${summaryData.runway || 0} months`);
+    setTxt('burnRate', safeCurrency(summaryData.currentBurnRate));
+
+    // --- 2. Update Breakdowns and Advanced Analytics ---
+    if (summaryData.parameters) {
+        populateParametersSummary(summaryData.parameters);
+    }
+    if (summaryData.costBreakdown) {
+        updateCostBreakdown(summaryData.costBreakdown);
+    }
+    if (summaryData.cacBreakdown) {
+        updateCACBreakdown(summaryData.cacBreakdown, summaryData.monthlyARPU || 0);
+    }
+    
+    updateAdvancedAnalyticsVisibility(); // Decides which advanced sections to show
+
+    // Update advanced sections only if they are enabled and data exists
+    if (summaryData.parameters && summaryData.parameters.enableTieredPricing && summaryData.tieredRevenueData) {
+        updateTieredRevenueAnalysis(summaryData.tieredRevenueData);
+    }
+    if (summaryData.parameters && summaryData.parameters.enableCohortTracking && summaryData.cohortData) {
+        updateCohortAnalysis(summaryData.cohortData);
+    }
+    if (summaryData.parameters && summaryData.parameters.enableVariableCosts && summaryData.variableCostData) {
+        updateVariableCostAnalysis(summaryData.variableCostData);
+    }
+    if (summaryData.parameters && summaryData.parameters.enableMultipleRounds && summaryData.fundingData) {
+        updateFundingRoundsAnalysis(summaryData.fundingData);
+    }
+    
+    // Only run sensitivity analysis if we have the required data
+    if (summaryData.cacBreakdown && summaryData.customerLTV && summaryData.parameters) {
+        updateSensitivityAnalysis(
+            summaryData.cacBreakdown,
+            summaryData.customerLTV,
+            summaryData.parameters.churnRate || 5,
+            summaryData.finalARR,
+            summaryData.netProfit,
+            summaryData.totalRevenue,
+            summaryData.totalCosts
+        );
+    }
+
+    // --- 3. Update Chart and Monthly Table ---
+    if (monthlyData && monthlyData.length > 0) {
+        updateChart(monthlyData);
+        const enableTieredPricing = summaryData.parameters && summaryData.parameters.enableTieredPricing;
+        const enableB2B = summaryData.parameters && summaryData.parameters.b2bStartMonth > 0;
+        updateMonthlyTable(monthlyData, enableTieredPricing, enableB2B);
+    }
+
+    // --- 4. Make the entire output section visible ---
+    const outputSection = getEl('outputSection');
+    if (outputSection) {
+        outputSection.style.display = 'block';
+        console.log('✅ Output section is now visible.');
+        // Scroll to the output section ONLY on manual trigger so the user sees the results
+        if (isManualTrigger) {
+            // Use 'center' instead of 'start' to avoid pushing content off the bottom
+            // and add a small delay to ensure content is rendered
+            setTimeout(() => {
+                outputSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center', 
+                    inline: 'nearest' 
+                });
+            }, 100);
+        }
+    } else {
+        console.error('❌ CRITICAL: outputSection element not found. Cannot display results.');
+    }
+}
+
+
+function updateMonthlyTable(monthlyData, tieredPricingEnabled, b2bEnabled) {
+    console.log('📊 Updating monthly table...', { 
+        dataLength: monthlyData?.length || 0, 
+        tieredPricingEnabled, 
+        b2bEnabled 
+    });
+    
+    const tbody = document.getElementById('monthlyTableBody');
+    if (!tbody) {
+        console.error('❌ Monthly table body not found');
+        return;
+    }
+    
+    if (!monthlyData || monthlyData.length === 0) {
+        console.warn('⚠️ No monthly data to display');
+        tbody.innerHTML = '<tr><td colspan="16" style="text-align: center; color: #999;">No data available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    monthlyData.forEach((data, index) => {
+        try {
+            const row = tbody.insertRow();
+            const safeNumber = (value) => (value || 0).toLocaleString();
+            const safePercent = (value) => ((value || 0) * 100).toFixed(1) + '%';
+            const safeCurrency = (value) => formatCurrency(value || 0);
+            
+            row.innerHTML = `
+                <td>${data.isBeta ? `Beta ${data.month}` : data.month - 2}</td>
+                <td>${safeNumber(data.mau)}</td>
+                <td>${safePercent(data.growthRate)}</td>
+                <td>${safeNumber(data.freeUsers)}</td>
+                <td>${safeNumber(data.basicUsers)}</td>
+                <td>${safeNumber(data.proUsers)}</td>
+                <td>${safePercent(data.conversionRate)}</td>
+                <td>${safeCurrency(data.monthlyRevenue)}</td>
+                <td>${safeCurrency(data.arr)}</td>
+                <td>${safeCurrency(data.teamCost)}</td>
+                <td>${safeCurrency(data.techCost)}</td>
+                <td>${safeCurrency(data.marketingCost)}</td>
+                <td>${safeCurrency(data.variableCosts)}</td>
+                <td>${safeCurrency(data.monthlyCosts)}</td>
+                <td class="${(data.netIncome || 0) >= 0 ? 'positive' : 'negative'}">${safeCurrency(data.netIncome)}</td>
+            `;
+        } catch (error) {
+            console.error(`❌ Error creating row ${index + 1}:`, error, data);
+        }
+    });
+    
+    console.log('✅ Monthly table updated successfully');
 }
 
