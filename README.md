@@ -1,141 +1,331 @@
-# NutriSnap Financial Forecast Calculator
+# 🥗 NutriSnap Financial Forecast Calculator v2.0
 
-This document serves as a comprehensive guide and Product Requirements Document (PRD) for the NutriSnap Financial Forecast Calculator. It is a standalone web-based tool designed for startups and businesses to model financial projections for a SaaS application, specifically tailored to a nutrition app like NutriSnap.
+A comprehensive, professional-grade financial modeling tool for SaaS businesses, specifically designed for nutrition apps like NutriSnap. This browser-based calculator provides detailed financial projections, interactive visualizations, and robust export capabilities.
 
-The calculator is built with HTML, CSS, and vanilla JavaScript, and it runs entirely in the browser without needing a backend server.
+## 🚀 Quick Start
 
-## How to Run Locally
+### Local Setup
+1. **Clone/Download** this repository to your local machine
+2. **Navigate** to the project directory in your terminal
+3. **Start a local server**:
+   ```bash
+   python3 -m http.server 8000
+   # OR
+   npx serve .
+   # OR
+   php -S localhost:8000
+   ```
+4. **Open** your browser and go to `http://localhost:8000`
 
-Since this is a client-side application, you only need a simple local web server.
-1.  Navigate to the project's root directory in your terminal.
-2.  Run the following command:
-    ```bash
-    python3 -m http.server
-    ```
-3.  Open your web browser and go to `http://localhost:8000`.
-
-## Core Features
-
--   **Dynamic Financial Projections:** Generates monthly financial forecasts for up to 5 years.
--   **Flexible Revenue Modeling:** Supports both a simple single-price model and a flexible four-tier freemium model.
--   **Advertising Revenue Stream:** Granular controls to model revenue from banner, interstitial, and rewarded video ads.
--   **Detailed Cost Structure:** Models fixed yearly costs (Team, Tech, Marketing) with optional monthly overrides for precision.
--   **Variable Cost Modeling:** Accounts for costs that scale with user growth, like support and infrastructure.
--   **Key Performance Indicators (KPIs):** Calculates and displays essential SaaS metrics, including MAU, ARR, LTV, CAC, LTV:CAC Ratio, Runway, and more.
--   **Interactive Charts:** Visualizes revenue, costs, and net income over time, plus a revenue composition doughnut chart.
--   **Scenario Planning:** Includes pre-defined scenarios (Conservative, Realistic, etc.) and allows users to save and load their own custom projections.
--   **Data Export:** Users can export their full financial model to CSV, a summary report to PDF, or capture a screenshot of the dashboard.
+### Alternative: Direct Browser Access
+Simply open `index.html` directly in your browser (some features may be limited without a server).
 
 ---
 
-## Detailed Feature Breakdown
+## 📊 Core Features
 
-### 1. Calculation Engine (`js/core.js`)
+### **Advanced Financial Modeling**
+- **📈 Dynamic Projections**: Generate monthly forecasts for 1-5 years (12-60 months)
+- **🎯 Multi-Tier Pricing**: Flexible pricing models with unlimited premium tiers
+- **💰 Revenue Streams**: Subscription, advertising, and B2B partnership revenue
+- **📉 Smart Cost Modeling**: Fixed and variable costs with scaling logic
+- **🔄 Churn & Growth**: Sophisticated user retention and growth modeling
 
-This is the heart of the calculator. The `calculateProjections` function orchestrates the entire financial model.
+### **Interactive Dashboard**
+- **📊 Real-Time Charts**: Multiple interactive chart types with hover details
+- **🎥 Presentation Mode**: Full-screen presentation for investor meetings  
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
+- **🎨 Professional UI**: Modern dark theme with intuitive controls
 
-#### Inputs & Core Parameters
+### **Data Management**
+- **💾 Auto-Backup System**: Automatic projection backups with recovery tools
+- **📂 Save/Load Projects**: Persistent storage with version compatibility
+- **📤 Multiple Export Formats**: PDF reports, CSV data, and screenshots
+- **🔄 Import/Export**: Share projections between devices and users
 
--   **Monthly Price:** The base subscription price for the single-tier model.
--   **Average Discount:** The average discount applied across all plans (e.g., from annual subscriptions). This is used to calculate a more realistic ARPU.
--   **Starting MAU:** The number of Monthly Active Users at the start of the projection.
--   **Projection Period:** A selectable timeframe for the forecast (1 to 5 years).
--   **Beta Period:** A mandatory 3-month pre-launch period where users can define initial user counts and costs, which are factored into the starting cash balance but not operational revenue.
+---
 
-#### Growth & Retention Logic
+## 🛠️ How to Use
 
--   **User Growth:** Modeled with separate monthly growth rates for Year 1, Year 2, and Year 3+, acknowledging that growth typically slows as a product matures. New users are calculated based on the previous month's total MAU.
--   **User Churn:** Modeled with separate monthly churn rates for Free and Paid users. A "Churn Improvement" factor reduces churn annually, simulating product improvements and better user retention over time.
--   **B2B Revenue:** A simple model to add a percentage-based revenue boost on top of consumer revenue, starting from a specified month.
+### **1. Core Setup**
+1. **📱 App Parameters**: Set starting MAU, projection period (12-60 months)
+2. **🚀 Beta Period**: Configure 3-month pre-launch costs and user counts
+3. **💰 Investment**: Enter seed funding and equity details
 
-#### Revenue Models
+### **2. Pricing Configuration**
+1. **Click "Add Premium Tier"** to create pricing tiers
+2. **Configure each tier**: Set name, monthly price, and user distribution weight
+3. **Annual Subscriptions**: Set discount percentage and adoption rate
+4. **Enable/Disable tiers** with checkboxes as needed
 
-The calculator supports two primary revenue models, controlled by a toggle.
+### **3. Growth & Retention**
+- **Growth Rates**: Set different monthly growth rates for Year 1, 2, and 3+
+- **Conversion Rates**: Define initial and target conversion rates (free → paid)
+- **Churn Rates**: Set monthly churn for free and paid users
+- **Churn Improvement**: Annual reduction in churn rates
 
-1.  **Single-Tier Subscription Model:**
-    -   When "Enable Tiered Pricing" is off.
-    -   Uses the main "Monthly Price" and "Average Discount" inputs.
-    -   The conversion rate from free to paid ramps up linearly over the projection period, from a defined "Initial Conversion Rate" to a "Final Conversion Rate."
+### **4. Revenue Streams**
 
-2.  **Flexible Tiered-Pricing Model:**
-    -   When "Enable Tiered Pricing" is on.
-    -   This model presents four distinct user tiers:
-        -   **Tier 1 (Free):** The base tier for all non-paying users.
-        -   **Tier 2 (Premium):** The first paid tier.
-        -   **Tier 3 (Pro):** The mid-level paid tier.
-        -   **Tier 4 (Max):** The highest-level paid tier.
-    -   **Flexibility:** Each of the three paid tiers (Premium, Pro, Max) can be individually **enabled or disabled** with a checkbox. This allows the user to model a business with one, two, or three paid tiers.
-    -   **Granular Control:** Each enabled tier has its own inputs for **Price** and **Conversion Rate** (from the free user pool).
-    -   The calculation logic iterates through the enabled tiers, converting free users to each tier based on its specific conversion rate. The total monthly revenue is the sum of (users in each tier * price of that tier).
+#### **Advertising Revenue** (Optional)
+- **📺 Banner Ads**: Low eCPM, high frequency (£1-3 per 1000 impressions)
+- **🎯 Interstitial Ads**: Medium eCPM, medium frequency (£5-15 per 1000)
+- **🎁 Rewarded Video**: High eCPM, low frequency (£10-40 per 1000)
+- **Quick Presets**: Conservative, Balanced, Aggressive, or Premium strategies
 
-#### Advertising Revenue Model (`enableAdvertisingRevenue`)
+#### **B2B Partnerships** (Optional)
+- **Start Month**: When partnerships begin contributing revenue
+- **Revenue Boost**: Percentage increase on consumer revenue
 
--   This entire revenue stream can be toggled on or off.
--   Revenue is calculated based on the number of **free users**.
--   **Granular Ad Type Control:** Users can enable/disable and configure three standard ad types:
-    -   **Banner Ads:** Low eCPM, high impression volume.
-    -   **Interstitial Ads:** Medium eCPM, medium impression volume.
-    -   **Rewarded Video Ads:** High eCPM, low impression volume.
--   **Configuration:** For each enabled ad type, users can set:
-    -   `eCPM` (effective Cost Per Mille, or revenue per 1000 impressions).
-    -   `Impressions per User per Month`.
--   **Growth:** An "Annual eCPM Growth" rate increases the eCPM for all ad types each year to model optimization.
+### **5. Cost Structure**
+- **👥 Team Costs**: Salaries, benefits, contractors (by year)
+- **🔧 Tech Costs**: Infrastructure, tools, licenses (by year)  
+- **📢 Marketing Costs**: Customer acquisition spend (by year)
+- **⚙️ Variable Costs**: Support, infrastructure, transaction fees (per user)
 
-#### Cost Models
+### **6. Advanced Features**
+- **📊 Cohort Tracking**: User retention analysis by signup month
+- **💼 Multiple Funding Rounds**: Series A, B, C planning
+- **🎯 Scenario Planning**: Pre-built Conservative, Realistic, Optimistic scenarios
 
-1.  **Fixed Costs:**
-    -   Defined on a per-year basis for **Team, Tech, and Marketing**.
-    -   The calculator applies the corresponding monthly average for each year of the projection.
-    -   **Monthly Override:** Users can optionally enable a "Monthly Detail View" for each cost category. This allows them to override the annual average and input a specific cost for every single month of the projection, providing maximum flexibility for planning hiring, marketing campaigns, or infrastructure upgrades.
+---
 
-2.  **Variable Costs (`enableVariableCosts`):**
-    -   An optional feature that adds costs scaling with growth.
-    -   **Infrastructure Cost per User:** A small monthly cost applied to every active user (free and paid).
-    -   **Support Cost per User:** A monthly cost applied only to **paid users**.
-    -   **Transaction Fees:** A percentage-based fee (e.g., for Stripe/Apple/Google) applied to all subscription revenue.
+## 📈 Key Metrics Calculated
 
-#### Investment & Valuation
+### **Financial Performance**
+- **ARR** (Annual Recurring Revenue): Monthly subscription revenue × 12
+- **MRR** (Monthly Recurring Revenue): Real-time subscription revenue
+- **Net Income**: Total revenue minus all costs
+- **Break-Even Month**: When net income turns positive
+- **Cash Runway**: Months until funding runs out
 
--   **Seed Investment:** The initial cash injection into the business.
--   **Equity & Valuation:** An exit valuation is calculated based on the final year's ARR multiplied by a user-defined **Exit Multiple**. Investor return is then calculated based on the **Equity Offered**.
+### **Unit Economics**
+- **ARPU** (Average Revenue Per User): Subscription revenue ÷ premium users
+- **LTV** (Customer Lifetime Value): ARPU ÷ monthly churn rate
+- **CAC** (Customer Acquisition Cost): Marketing spend ÷ users acquired
+- **LTV:CAC Ratio**: Health metric (target: >3:1)
+- **Payback Period**: Months to recover customer acquisition cost
 
-### 2. User Interface (`index.html`, `js/ui.js`, `style.css`)
+### **Growth Metrics**
+- **MAU Growth**: Month-over-month active user growth
+- **Conversion Rate**: Percentage of free users converting to paid
+- **User Distribution**: Breakdown across pricing tiers
+- **Revenue Composition**: Subscription vs advertising vs B2B
 
-The UI is designed to be intuitive, grouping related parameters into cards.
+---
 
--   **Dynamic UI Toggles:** Checkboxes for "Enable Tiered Pricing," "Enable Advertising Revenue," and "Enable Variable Costs" show and hide their respective configuration sections, keeping the interface clean.
--   **Tier Visibility:** The checkboxes within the tiered pricing section dynamically show/hide the controls for each tier and, crucially, also show/hide the corresponding columns in the monthly data table.
--   **Slider Controls:** Most percentage and rate-based inputs use sliders for intuitive control, with a live text display of the current value.
--   **Outputs:**
-    -   **Summary Dashboard:** A grid of cards displaying the most important top-level KPIs.
-    -   **Breakdown Cards:** Smaller, focused cards that provide a deeper look into specific areas like CAC, Variable Costs, Advertising Revenue, etc.
-    -   **Monthly Data Table:** A detailed, scrollable table showing the full financial model month by month.
--   **Tooltips:** Info icons provide helpful tooltips explaining what each parameter means.
+## 📊 Interactive Charts & Visualizations
 
-### 3. Data Visualization (`js/charts.js`)
+### **Chart Types Available**
+1. **💰 Revenue Growth Waterfall**: Month-by-month revenue building
+2. **📈 Growth Metrics Dashboard**: MAU, conversions, and growth trends  
+3. **🏃 Cash Flow & Runway**: Burn rate and funding runway analysis
+4. **💎 Unit Economics**: LTV:CAC analysis with profitability metrics
+5. **📊 Financial Overview**: Complete revenue, costs, and user trends
 
--   **Main Projection Chart:** A line chart that plots Monthly Revenue, Total Costs, and Net Income over the entire projection period.
--   **Revenue Composition Chart:** A doughnut chart that appears only when there is revenue. It visualizes the breakdown of revenue sources: Subscription vs. each enabled Advertising type (Banner, Interstitial, Rewarded).
+### **Chart Features**
+- **Interactive Tooltips**: Hover for detailed breakdowns
+- **🎥 Presentation Mode**: Full-screen charts for presentations
+- **📱 Responsive Design**: Adapts to all screen sizes
+- **🎨 Professional Styling**: Investor-ready visualizations
 
-### 4. Scenarios & Data Persistence (`js/scenarios.js`)
+---
 
--   **Quick Scenarios:** Buttons to instantly load pre-configured parameters for "Conservative," "Realistic," "Optimistic," and "Investor Ready" models.
--   **Save/Load Projections:** Users can name and save their current set of parameters. These are stored in the browser's `localStorage`, allowing them to be reloaded in future sessions. The list of saved projections is displayed in the UI, with options to load or delete each one.
+## 💾 Data Export & Backup
 
-### 5. Exporting (`js/export.js`)
+### **Export Formats**
+1. **📄 Professional PDF Report**:
+   - Executive summary with key metrics
+   - Detailed assumptions and parameters
+   - Monthly projections summary
+   - Unit economics analysis
+   - Risk assessment and recommendations
 
--   **Export to CSV:** Generates a CSV file containing the full, detailed monthly projection data. The columns in the CSV dynamically adjust to match the enabled/disabled state of the pricing tiers.
--   **Export to PDF:** Generates a professional, multi-page PDF summary report including the executive summary, key parameters, CAC breakdown, and a summary of the monthly data table.
--   **Export Screenshot:** Uses the `html2canvas` library to capture a PNG image of the entire output dashboard.
+2. **📊 Comprehensive CSV Data**:
+   - Complete monthly projections
+   - All input parameters
+   - Breakdown by revenue streams
+   - Cost categories and calculations
 
-### 6. File Structure
+3. **📸 Dashboard Screenshot**:
+   - Full-screen capture of entire interface
+   - Includes charts, tables, and parameters
+   - High-resolution PNG format
 
--   `index.html`: The main and only HTML file, containing the entire UI structure.
--   `style.css`: All styles for the application.
--   `js/`: Directory for all JavaScript files.
-    -   `core.js`: The main calculation engine.
-    -   `ui.js`: Handles all DOM manipulation, UI state changes, and displaying results.
-    -   `charts.js`: Manages the Chart.js integration.
-    -   `export.js`: Contains logic for CSV, PDF, and screenshot exports.
-    -   `scenarios.js`: Manages the pre-defined scenarios and the save/load functionality.
-    -   `utils.js`: Contains shared helper functions, primarily for formatting and handling the monthly cost override feature.
+### **Backup & Recovery System**
+- **🔄 Automatic Backups**: Created every time you load the app
+- **📂 Manual Backups**: Export individual or all projections
+- **🛠️ Recovery Tool**: Dedicated tool to find and restore lost projections
+- **📤 Import/Export**: Share projections between devices
+
+---
+
+## 🎯 Pre-Built Scenarios
+
+### **Conservative Scenario**
+- Lower growth rates (12-8-5% monthly)
+- Higher churn rates (25% free, 8% paid)
+- Minimal advertising (banner ads only)
+- Conservative pricing (£7.99/month)
+
+### **Realistic Scenario**  
+- Balanced growth (16-12-8% monthly)
+- Moderate churn (20% free, 5% paid)
+- Mixed advertising (banner + interstitial)
+- Standard pricing (£9.99/month)
+
+### **Optimistic Scenario**
+- High growth (22-18-12% monthly)
+- Low churn (15% free, 3% paid)
+- Full advertising suite (all ad types)
+- Premium pricing (£12.99/month)
+
+### **Investor Ready Scenario**
+- Aggressive but achievable growth
+- Strong unit economics
+- Multiple revenue streams
+- B2B partnerships included
+- Designed for fundraising presentations
+
+---
+
+## 🔧 Technical Architecture
+
+### **File Structure**
+```
+/
+├── index.html              # Main application file
+├── style.css              # Complete styling
+├── recover-projections.html # Backup recovery tool
+├── js/
+│   ├── main.js            # Core calculation engine
+│   ├── charts.js          # Chart.js integration
+│   ├── interactive-charts.js # Advanced chart features
+│   ├── export.js          # PDF/CSV/screenshot exports
+│   ├── scenarios.js       # Save/load & preset scenarios
+│   └── utils.js           # Helper functions
+└── README.md              # This documentation
+```
+
+### **Technology Stack**
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript (ES6+)
+- **Charts**: Chart.js v4.4.0 with plugins
+- **PDF Generation**: jsPDF with AutoTable plugin
+- **Screenshots**: html2canvas library  
+- **Storage**: LocalStorage + IndexedDB for redundancy
+- **No Backend Required**: Runs entirely in browser
+
+### **Browser Compatibility**
+- ✅ Chrome 90+ (Recommended)
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+
+---
+
+## 📝 Validation & Accuracy
+
+### **Financial Formula Validation**
+The tool validates all financial calculations with transparent formulas:
+
+- **Conversion Rate**: Premium Users ÷ Total MAU × 100%
+- **ARR Calculation**: Monthly Subscription Revenue × 12
+- **Net Income**: (Subscription + Ad + B2B Revenue) - Total Costs
+- **ARPU**: Subscription Revenue ÷ Premium Users
+- **LTV:CAC Ratio**: Customer LTV ÷ Customer CAC
+
+### **Built-in Validation**
+- ✅ Parameter range checking
+- ✅ Logical consistency warnings
+- ✅ Financial calculation verification
+- ✅ Tier pricing validation
+- ✅ Growth rate reasonableness checks
+
+---
+
+## 🚨 Troubleshooting
+
+### **Common Issues**
+
+**🔴 Projections Disappear After Updates**
+- Use the **🛠️ Recovery Tool** button to find lost projections
+- Click **🔄 Restore Backup** to recover from automatic backups
+- Always **📤 Export All** before making changes
+
+**🔴 Charts Not Loading**
+- Refresh the page and wait for all libraries to load
+- Check browser console for JavaScript errors
+- Ensure you're using a supported browser
+
+**🔴 Export Functions Not Working**
+- Click **Test Functions** in the export section for diagnostics
+- Ensure popup blockers are disabled
+- Try a different browser if issues persist
+
+**🔴 Mobile Display Issues**
+- Use landscape orientation for better table viewing
+- Charts are optimized for touch interaction
+- Some features work better on larger screens
+
+### **Getting Help**
+1. Check the **Financial Validation Summary** for calculation details
+2. Use the **Recovery Tool** for backup/restore issues
+3. Export your data before making major changes
+4. Keep backup files of important projections
+
+---
+
+## 🎯 Best Practices
+
+### **For Accurate Projections**
+1. **Start Conservative**: Use realistic growth and conversion rates
+2. **Validate Assumptions**: Compare with industry benchmarks  
+3. **Stress Test**: Try different scenarios to understand sensitivity
+4. **Regular Updates**: Refresh projections with actual data
+5. **Document Assumptions**: Save multiple scenarios with clear names
+
+### **For Investor Presentations**
+1. **Use Presentation Mode**: Full-screen charts for meetings
+2. **Export Professional PDFs**: Include detailed assumptions
+3. **Show Multiple Scenarios**: Conservative, realistic, optimistic
+4. **Highlight Unit Economics**: Focus on LTV:CAC and payback period
+5. **Explain Revenue Mix**: Show diversification across streams
+
+### **For Business Planning**
+1. **Monthly Reviews**: Update projections with actual performance
+2. **Sensitivity Analysis**: Test impact of key assumption changes
+3. **Cash Flow Planning**: Monitor runway and funding needs
+4. **Team Planning**: Use cost projections for hiring decisions
+5. **Goal Setting**: Use projections to set realistic targets
+
+---
+
+## 🔮 Future Enhancements
+
+This tool is actively maintained with planned improvements:
+
+- 🎯 **Advanced Analytics**: Cohort analysis and customer segments
+- 📊 **More Chart Types**: Waterfall charts, heatmaps, and comparisons  
+- 🔄 **API Integration**: Connect with actual business data
+- 📱 **Mobile App**: Native iOS/Android versions
+- 🤖 **AI Insights**: Automated recommendations and optimization
+- 🌐 **Collaboration**: Multi-user editing and sharing
+- 📈 **Advanced Modeling**: Monte Carlo simulations and scenario trees
+
+---
+
+## 📄 License & Credits
+
+**Created for NutriSnap Financial Modeling**  
+Built with ❤️ using modern web technologies
+
+**Key Libraries:**
+- Chart.js for interactive visualizations
+- jsPDF for professional report generation
+- html2canvas for screenshot capabilities
+
+**No warranty is provided. Use at your own discretion for business planning.**
+
+---
+
+*Last Updated: $(date)*  
+*Version: 2.0 Professional*
