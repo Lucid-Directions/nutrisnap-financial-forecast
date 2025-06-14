@@ -1,0 +1,2373 @@
+//
+// js/app.js
+//
+// This file contains the main application logic, event listeners, and functions
+// that connect the UI to the core calculation engine.
+
+// =======================================================================================
+// UTILITY & HELPER FUNCTIONS (formerly in utils.js)
+// =======================================================================================
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
+}
+window.formatCurrency = formatCurrency;
+
+function formatNumber(number) {
+    if (typeof number !== 'number' || isNaN(number)) return '0';
+    return number.toLocaleString();
+}
+window.formatNumber = formatNumber;
+
+// =======================================================================================
+// LOCAL STORAGE & SCENARIO MANAGEMENT
+// =======================================================================================
+
+function displaySavedProjections() {
+    const container = document.getElementById('savedProjections');
+    if (!container) return;
+
+    const saved = JSON.parse(localStorage.getItem('nutriSnapScenarios') || '{}');
+    container.innerHTML = Object.keys(saved).map(name => `
+        <div class="saved-item">
+            <span>${name}</span>
+            <div>
+                <button onclick="loadScenario('${name}')">Load</button>
+                <button onclick="deleteScenario('${name}')" class="delete">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+window.displaySavedProjections = displaySavedProjections;
+
+function saveScenario() {
+    const nameInput = document.getElementById('projectionName');
+    const name = nameInput.value.trim();
+    if (!name) {
+        alert('Please enter a name for your projection.');
+        return;
+    }
+
+    const inputs = document.querySelectorAll('input, select');
+    const scenarioData = {};
+    inputs.forEach(input => {
+        if (input.id) {
+            scenarioData[input.id] = input.type === 'checkbox' ? input.checked : input.value;
+        }
+    });
+
+    const allScenarios = JSON.parse(localStorage.getItem('nutriSnapScenarios') || '{}');
+    allScenarios[name] = scenarioData;
+    localStorage.setItem('nutriSnapScenarios', JSON.stringify(allScenarios));
+
+    nameInput.value = '';
+    displaySavedProjections();
+    alert(`Projection "${name}" saved!`);
+}
+window.saveScenario = saveScenario;
+
+function deleteScenario(name) {
+    if (confirm(`Are you sure you want to delete "${name}"?`)) {
+        const allScenarios = JSON.parse(localStorage.getItem('nutriSnapScenarios') || '{}');
+        delete allScenarios[name];
+        localStorage.setItem('nutriSnapScenarios', JSON.stringify(allScenarios));
+        displaySavedProjections();
+    }
+}
+window.deleteScenario = deleteScenario;
+
+
+// =================================================================================================
+// MAIN CALCULATION & VALIDATION LOGIC
+// =================================================================================================
+
+/**
+ * Main function to trigger validation and calculation.
+ * This is the primary entry point from the UI.
+ * @param {boolean} isManualTrigger - True if triggered by user click on main button.
+ */
+function calculateProjectionsWithValidation(isManualTrigger = false) {
+    console.log('🚀 Starting validation and projection calculation...');
+
+    // Ensure the validator from validator.js is available
+    if (typeof FinancialValidator === 'undefined') {
+        console.error('❌ FinancialValidator class not found. Make sure validator.js is loaded before app.js.');
+        alert('A critical error occurred. The financial validator script is missing.');
+        return;
+    }
+
+    // Always create a new validator instance to ensure fresh state
+    window.financialValidator = new FinancialValidator();
+    const validationResult = window.financialValidator.validateAll();
+
+    // Display validation results (errors and warnings) if manually triggered
+    if (isManualTrigger) {
+        window.financialValidator.displayResults('validationResults');
+    }
+
+    // Proceed with calculation only if there are no critical errors
+    if (validationResult.isValid) {
+        console.log('✅ Validation successful. Proceeding to core calculation.');
+        calculateProjections(isManualTrigger);
+
+    } else {
+        console.error('❌ Validation failed. Aborting calculation.', validationResult.errors);
+        const statusEl = document.getElementById('calculationStatus');
+        if (statusEl) {
+            statusEl.innerText = 'Please fix the errors above before calculating.';
+        }
+        // Ensure output is hidden if validation fails
+        const outputSection = document.getElementById('outputSection');
+        if (outputSection) {
+            outputSection.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Core function to gather inputs and run the main financial calculation engine.
+ * @param {boolean} isManualTrigger - Passed down to determine if certain alerts/logs should show.
+ */
+function calculateProjections(isManualTrigger = false) {
+    try {
+        console.time('CoreCalculationTime');
+        console.log(`🧮 Gathering inputs for calculation... (Manual Trigger: ${isManualTrigger})`);
+
+        // Helper functions to safely get values from the DOM
+        const getEl = (id) => document.getElementById(id);
+        const getVal = (id) => parseFloat(getEl(id)?.value) || 0;
+        const getInt = (id) => parseInt(getEl(id)?.value) || 0;
+        const getChecked = (id) => getEl(id)?.checked || false;
+
+        // Consolidate all parameters into a single object for the core engine
+        const params = {
+            // Core Parameters
+            startingMAU: getVal('startingMAU'),
+            projectionPeriod: getInt('projectionPeriod'),
+            annualDiscount: getVal('annualDiscount') / 100,
+
+            // Growth Parameters
+            year1Growth: getVal('year1Growth') / 100,
+            year2Growth: getVal('year2Growth') / 100,
+            year3Growth: getVal('year3Growth') / 100,
+
+            // Conversion & Churn
+            initialConversion: getVal('initialConversion') / 100,
+            finalConversion: getVal('finalConversion') / 100,
+            freeChurnRate: getVal('freeChurnRate') / 100,
+            paidChurnRate: getVal('paidChurnRate') / 100,
+            churnImprovement: getVal('churnImprovement') / 100,
+            
+            // B2B Revenue
+            b2bStartMonth: getInt('b2bStartMonth'),
+            b2bPercentage: getVal('b2bPercentage') / 100,
+
+            // Beta Period
+            betaUsers: [getInt('betaUsersM0'), getInt('betaUsersM1'), getInt('betaUsersM2')],
+            betaCosts: [
+                { team: getVal('betaTeamCostM0'), tech: getVal('betaTechCostM0'), marketing: getVal('betaMarketingCostM0') },
+                { team: getVal('betaTeamCostM1'), tech: getVal('betaTechCostM1'), marketing: getVal('betaMarketingCostM1') },
+                { team: getVal('betaTeamCostM2'), tech: getVal('betaTechCostM2'), marketing: getVal('betaMarketingCostM2') }
+            ],
+
+            // Advertising Revenue
+            enableAdvertisingRevenue: getChecked('enableAdvertisingRevenue'),
+            adRevenueStartMonth: getInt('adRevenueStartMonth'),
+            adRevenueGrowth: getVal('adRevenueGrowth') / 100,
+            adTypes: {
+                banner: { enabled: getChecked('enableBannerAds'), ecpm: getVal('bannerECPM'), impressions: getVal('bannerImpressions') },
+                interstitial: { enabled: getChecked('enableInterstitialAds'), ecpm: getVal('interstitialECPM'), impressions: getVal('interstitialImpressions') },
+                rewarded: { enabled: getChecked('enableRewardedAds'), ecpm: getVal('rewardedECPM'), impressions: getVal('rewardedImpressions') }
+            },
+
+            // Cost Structure (Annual)
+            teamCosts: [getVal('teamCostY1'), getVal('teamCostY2'), getVal('teamCostY3')],
+            techCosts: [getVal('techCostY1'), getVal('techCostY2'), getVal('techCostY3')],
+            marketingCosts: [getVal('marketingCostY1'), getVal('marketingCostY2'), getVal('marketingCostY3')],
+            
+            // Investment & Valuation
+            seedInvestment: getVal('seedInvestment'),
+            equityOffered: getVal('equityOffered') / 100,
+            valuationMultiple: getVal('valuationMultiple'),
+
+            // Advanced Features
+            enableTieredPricing: getChecked('enableTieredPricing'),
+            enableVariableCosts: getChecked('enableVariableCosts'),
+            variableCosts: {
+                supportPerUser: getVal('supportCostPerUser'),
+                infraPerUser: getVal('infraCostPerUser'),
+                transactionFees: getVal('transactionFees') / 100,
+            },
+
+            // Tiered Pricing Details
+            tiers: [
+                { name: getEl('tier0Name')?.value || 'Free', price: 0, conversion: 1, enabled: true },
+                { name: getEl('tier1Name')?.value || 'Premium', price: getVal('basicPrice'), conversion: getVal('basicConversion') / 100, enabled: getChecked('enableTier1') },
+                { name: getEl('tier2Name')?.value || 'Pro', price: getVal('proPrice'), conversion: getVal('proConversion') / 100, enabled: getChecked('enableTier2') },
+                { name: getEl('tier3Name')?.value || 'Max', price: getVal('enterprisePrice'), conversion: getVal('enterpriseConversion') / 100, enabled: getChecked('enableTier3') }
+            ]
+        };
+        console.log("📊 Input parameters gathered:", params);
+
+        // Run the core calculation engine from core.js
+        if (typeof window.runFinancialCalculation !== 'function') {
+            throw new Error('Core calculation engine (runFinancialCalculation) is not available.');
+        }
+        const calculationResults = window.runFinancialCalculation(params);
+        console.log("📈 Calculation results received:", calculationResults);
+
+        // Display the results using the UI handler from ui.js
+        if (typeof window.displayFinancialResults !== 'function') {
+            throw new Error('UI display function (displayFinancialResults) is not available.');
+        }
+        window.displayFinancialResults(calculationResults, isManualTrigger);
+        console.log("✅ Projections calculated and displayed successfully.");
+
+    } catch (error) {
+        console.error("An error occurred during the financial calculation process:", error);
+        if (isManualTrigger) {
+            alert(`An unexpected error occurred: ${error.message}\nPlease check your inputs or reset the tool.`);
+        }
+    } finally {
+        console.timeEnd('CoreCalculationTime');
+    }
+}
+
+// =======================================================================================
+// UI EVENT LISTENERS & INITIALIZATION
+// =======================================================================================
+
+function updateSliderValue(slider) {
+    if (!slider) return;
+    const displayId = slider.id + 'Value';
+    const displayElement = document.getElementById(displayId);
+    if (displayElement) {
+        let value = slider.value;
+        if (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('discount') || slider.id.toLowerCase().includes('conversion') || slider.id.toLowerCase().includes('percentage') || slider.id.toLowerCase().includes('equity')) {
+            value += '%';
+        } else if (slider.id.toLowerCase().includes('ecpm')) {
+             value = '£' + parseFloat(slider.value).toFixed(2);
+        } else if (slider.id.toLowerCase().includes('multiple')) {
+            value = value + 'x';
+        }
+        displayElement.textContent = value;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM fully loaded. Initializing application...');
+    
+    // Initialize all sliders with their initial values
+    document.querySelectorAll('input[type="range"]').forEach(slider => {
+        updateSliderValue(slider);
+        // Add event listener for real-time updates
+        slider.addEventListener('input', () => updateSliderValue(slider));
+    });
+    
+    // Set initial state for feature toggles
+    toggleTieredPricing();
+    toggleVariableCosts();
+    toggleAdvertisingRevenue();
+    
+    // Load saved projections list
+    displaySavedProjections();
+    
+    console.log('✅ Application initialized successfully.');
+});
+
+
+//
+// js/validator.js
+//
+// Input Validation and Error Handling
+// Validates user inputs and provides helpful feedback
+
+class FinancialValidator {
+    constructor() {
+        this.errors = [];
+        this.warnings = [];
+    }
+
+    // Clear previous validation results
+    reset() {
+        this.errors = [];
+        this.warnings = [];
+    }
+
+    // Add error message
+    addError(field, message) {
+        this.errors.push({ field, message });
+    }
+
+    // Add warning message
+    addWarning(field, message) {
+        this.warnings.push({ field, message });
+    }
+
+    // Get element value safely
+    getValue(id) {
+        const element = document.getElementById(id);
+        return element ? parseFloat(element.value) || 0 : 0;
+    }
+
+    // Check if checkbox is checked
+    isChecked(id) {
+        const element = document.getElementById(id);
+        return element ? element.checked : false;
+    }
+
+    // Validate core parameters
+    validateCoreParameters() {
+        const appPrice = this.getValue('appPrice');
+        const startingMAU = this.getValue('startingMAU');
+        const seedInvestment = this.getValue('seedInvestment');
+        const tieredPricing = this.isChecked('enableTieredPricing');
+
+        // App Price Validation
+        if (!tieredPricing) {
+            if (appPrice <= 0) {
+                this.addError('appPrice', 'App price must be greater than £0');
+            } else if (appPrice < 2.99) {
+                this.addWarning('appPrice', 'App price below £2.99 may be too low for sustainable business');
+            } else if (appPrice > 49.99) {
+                this.addWarning('appPrice', 'App price above £49.99 may limit user adoption');
+            }
+        }
+
+        // Starting MAU Validation
+        if (startingMAU <= 0) {
+            this.addError('startingMAU', 'Starting MAU must be greater than 0');
+        } else if (startingMAU < 100) {
+            this.addWarning('startingMAU', 'Starting with less than 100 users may make projections unreliable');
+        } else if (startingMAU > 50000) {
+            this.addWarning('startingMAU', 'Starting with 50K+ users suggests you may already be past early stage');
+        }
+
+        // Seed Investment Validation
+        if (seedInvestment < 10000) {
+            this.addWarning('seedInvestment', 'Seed investment below £10K may be insufficient for app development');
+        }
+    }
+
+    // Validate growth parameters
+    validateGrowthParameters() {
+        const year1Growth = this.getValue('year1Growth');
+        const year2Growth = this.getValue('year2Growth');
+        const year3Growth = this.getValue('year3Growth');
+
+        // Growth Rate Validation
+        if (year1Growth > year2Growth || year2Growth > year3Growth) {
+            this.addWarning('growth', 'Growth rates should typically decrease over time as market matures');
+        }
+
+        if (year1Growth > 50) {
+            this.addWarning('year1Growth', 'Monthly growth >50% is extremely optimistic for most apps');
+        }
+
+        if (year3Growth < 2) {
+            this.addWarning('year3Growth', 'Long-term growth <2% monthly may indicate market saturation');
+        }
+    }
+
+    // Validate conversion and churn parameters
+    validateConversionChurn() {
+        const initialConversion = this.getValue('initialConversion');
+        const finalConversion = this.getValue('finalConversion');
+        const freeChurnRate = this.getValue('freeChurnRate');
+        const paidChurnRate = this.getValue('paidChurnRate');
+
+        // Conversion Rate Validation
+        if (finalConversion <= initialConversion) {
+            this.addWarning('conversion', 'Final conversion rate should be higher than initial rate');
+        }
+
+        if (finalConversion > 15) {
+            this.addWarning('finalConversion', 'Conversion rate >15% is very optimistic for freemium apps');
+        }
+
+        // Churn Rate Validation
+        if (paidChurnRate >= freeChurnRate) {
+            this.addWarning('churn', 'Paid user churn should typically be lower than free user churn');
+        }
+
+        if (paidChurnRate > 10) {
+            this.addWarning('paidChurnRate', 'Monthly paid churn >10% indicates serious retention issues');
+        }
+
+        if (freeChurnRate > 40) {
+            this.addWarning('freeChurnRate', 'Monthly free churn >40% is very high even for free users');
+        }
+    }
+
+    // Validate cost structure
+    validateCostStructure() {
+        const teamCostY1 = this.getValue('teamCostY1');
+        const teamCostY3 = this.getValue('teamCostY3');
+        const marketingCostY1 = this.getValue('marketingCostY1');
+        const techCostY1 = this.getValue('techCostY1');
+
+        // Team Cost Validation
+        if (teamCostY1 < 2000) {
+            this.addWarning('teamCostY1', 'Team costs <£2K/month may be unrealistic for app development');
+        }
+
+        if (teamCostY3 / teamCostY1 > 20) {
+            this.addWarning('teamCosts', 'Team cost growth >20x may be too aggressive');
+        }
+
+        // Marketing Cost Validation
+        if (marketingCostY1 > teamCostY1) {
+            this.addWarning('marketingCostY1', 'Marketing costs higher than team costs in Year 1 is unusual');
+        }
+
+        // Tech Cost Validation
+        if (techCostY1 < 100) {
+            this.addWarning('techCostY1', 'Tech costs <£100/month may not cover basic infrastructure');
+        }
+    }
+
+    // Validate tiered pricing if enabled
+    validateTieredPricing() {
+        if (!this.isChecked('enableTieredPricing')) return;
+
+        const basicPrice = this.getValue('basicPrice');
+        const proPrice = this.getValue('proPrice');
+        const enterprisePrice = this.getValue('enterprisePrice');
+
+        const basicEnabled = this.isChecked('enableTier1');
+        const proEnabled = this.isChecked('enableTier2');
+        const enterpriseEnabled = this.isChecked('enableTier3');
+
+        // Price progression validation
+        if (basicEnabled && proEnabled && basicPrice >= proPrice) {
+            this.addError('tierPricing', 'Basic tier price should be lower than Pro tier price');
+        }
+
+        if (proEnabled && enterpriseEnabled && proPrice >= enterprisePrice) {
+            this.addError('tierPricing', 'Pro tier price should be lower than Enterprise tier price');
+        }
+
+        // Check if at least one paid tier is enabled
+        if (!basicEnabled && !proEnabled && !enterpriseEnabled) {
+            this.addError('tierPricing', 'At least one paid tier must be enabled when using tiered pricing');
+        }
+    }
+
+    // Validate advertising revenue settings
+    validateAdvertisingRevenue() {
+        if (!this.isChecked('enableAdvertisingRevenue')) return;
+
+        const bannerEnabled = this.isChecked('enableBannerAds');
+        const interstitialEnabled = this.isChecked('enableInterstitialAds');
+        const rewardedEnabled = this.isChecked('enableRewardedAds');
+
+        // Check if at least one ad type is enabled
+        if (!bannerEnabled && !interstitialEnabled && !rewardedEnabled) {
+            this.addError('advertising', 'At least one ad type must be enabled when advertising revenue is enabled');
+        }
+
+        // Validate eCPM values
+        if (bannerEnabled) {
+            const bannerECPM = this.getValue('bannerECPM');
+            if (bannerECPM < 0.50 || bannerECPM > 10) {
+                this.addWarning('bannerECPM', 'Banner eCPM should typically be £0.50-£10.00');
+            }
+        }
+
+        if (interstitialEnabled) {
+            const interstitialECPM = this.getValue('interstitialECPM');
+            if (interstitialECPM < 3 || interstitialECPM > 25) {
+                this.addWarning('interstitialECPM', 'Interstitial eCPM should typically be £3.00-£25.00');
+            }
+        }
+
+        if (rewardedEnabled) {
+            const rewardedECPM = this.getValue('rewardedECPM');
+            if (rewardedECPM < 8 || rewardedECPM > 60) {
+                this.addWarning('rewardedECPM', 'Rewarded video eCPM should typically be £8.00-£60.00');
+            }
+        }
+    }
+
+    // Main validation function
+    validateAll() {
+        this.reset();
+        
+        this.validateCoreParameters();
+        this.validateGrowthParameters();
+        this.validateConversionChurn();
+        this.validateCostStructure();
+        this.validateTieredPricing();
+        this.validateAdvertisingRevenue();
+
+        return {
+            isValid: this.errors.length === 0,
+            errors: this.errors,
+            warnings: this.warnings,
+            hasWarnings: this.warnings.length > 0
+        };
+    }
+
+    // Display validation results
+    displayResults(containerId = 'validationResults') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const validation = this.validateAll();
+        
+        let html = '';
+        
+        if (validation.errors.length > 0) {
+            html += '<div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 10px;">';
+            html += '<h4 style="margin: 0 0 8px 0; color: #991b1b;">❌ Errors (Must Fix):</h4>';
+            validation.errors.forEach(error => {
+                html += `<div>• <strong>${error.field}:</strong> ${error.message}</div>`;
+            });
+            html += '</div>';
+        }
+        
+        if (validation.warnings.length > 0) {
+            html += '<div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 10px;">';
+            html += '<h4 style="margin: 0 0 8px 0; color: #92400e;">⚠️ Warnings (Review Recommended):</h4>';
+            validation.warnings.forEach(warning => {
+                html += `<div>• <strong>${warning.field}:</strong> ${warning.message}</div>`;
+            });
+            html += '</div>';
+        }
+        
+        if (validation.errors.length === 0 && validation.warnings.length === 0) {
+            html = '<div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px; border-radius: 6px; margin-bottom: 10px;">';
+            html += '<h4 style="margin: 0; color: #1e40af;">✅ All inputs seem reasonable.</h4>';
+            html += '</div>';
+        }
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+    }
+}
+
+// Global validator instance
+window.validator = new FinancialValidator();
+
+// Main function to run validation and then calculations
+function calculateProjectionsWithValidation(isManualTrigger = false) {
+    console.log('🚀 Starting validation and projection calculation...');
+    
+    // Instantiate the validator from validator.js
+    if (typeof FinancialValidator === 'undefined') {
+        console.error('❌ FinancialValidator class not found. Make sure validator.js is loaded.');
+        alert('A critical error occurred. The validator script is missing.');
+        return;
+    }
+    
+    window.financialValidator = new FinancialValidator();
+    const validationResult = window.financialValidator.validateAll();
+    
+    if (isManualTrigger) {
+        window.financialValidator.displayResults('validationResults');
+    }
+    
+    if (validationResult.isValid) {
+        console.log('✅ Validation successful. Proceeding to calculations.');
+        calculateProjections(isManualTrigger);
+        
+        // Display warnings if any
+        if (validationResult.hasWarnings && isManualTrigger) {
+            const container = document.getElementById('validationResults');
+            if (container && !container.innerHTML.includes('Warnings')) {
+                window.financialValidator.displayResults('validationResults');
+            }
+        }
+        
+    } else {
+        console.error('❌ Validation failed. Aborting calculation.', validationResult.errors);
+        document.getElementById('calculationStatus').innerText = 'Please fix the errors above before calculating.';
+        document.getElementById('outputSection').style.display = 'none';
+    }
+}
+window.calculateProjectionsWithValidation = calculateProjectionsWithValidation;
+
+
+//
+// js/core.js
+//
+// Core Financial Calculation Engine
+// Handles the main projection calculations
+
+// Global state
+let globalMonthlyData = [];
+let monthlyCustomCosts = {};
+let globalSummaryData = null;
+
+// Helper functions for calculations
+// formatCurrency moved to utils.js
+
+// Main calculation function
+function calculateProjections(isManualTrigger = false) {
+    try {
+        console.time('calculateProjections');
+        console.log(`🚀 Starting calculateProjections... (Manual Trigger: ${isManualTrigger})`);
+        
+        // =======================================================================================
+        // 1. GATHER ALL INPUTS
+        // =======================================================================================
+        const getEl = (id) => document.getElementById(id);
+        const getVal = (id) => parseFloat(getEl(id)?.value) || 0;
+        const getInt = (id) => parseInt(getEl(id)?.value) || 0;
+        const getChecked = (id) => getEl(id)?.checked || false;
+        
+        const params = {
+            // Core Parameters
+            startingMAU: getVal('startingMAU'),
+            projectionPeriod: getInt('projectionPeriod'),
+            annualDiscount: getVal('annualDiscount') / 100,
+
+            // Growth Parameters
+            year1Growth: getVal('year1Growth') / 100,
+            year2Growth: getVal('year2Growth') / 100,
+            year3Growth: getVal('year3Growth') / 100,
+
+            // Conversion & Churn Parameters
+            initialConversion: getVal('initialConversion') / 100,
+            finalConversion: getVal('finalConversion') / 100,
+            freeChurnRate: getVal('freeChurnRate') / 100,
+            paidChurnRate: getVal('paidChurnRate') / 100,
+            churnImprovement: getVal('churnImprovement') / 100,
+
+            // B2B Revenue
+            b2bStartMonth: getInt('b2bStartMonth'),
+            b2bPercentage: getVal('b2bPercentage') / 100,
+
+            // Beta Period
+            betaUsersM0: getInt('betaUsersM0'),
+            betaUsersM1: getInt('betaUsersM1'),
+            betaUsersM2: getInt('betaUsersM2'),
+            betaTeamCostM0: getVal('betaTeamCostM0'),
+            betaTechCostM0: getVal('betaTechCostM0'),
+            betaMarketingCostM0: getVal('betaMarketingCostM0'),
+            betaTeamCostM1: getVal('betaTeamCostM1'),
+            betaTechCostM1: getVal('betaTechCostM1'),
+            betaMarketingCostM1: getVal('betaMarketingCostM1'),
+            betaTeamCostM2: getVal('betaTeamCostM2'),
+            betaTechCostM2: getVal('betaTechCostM2'),
+            betaMarketingCostM2: getVal('betaMarketingCostM2'),
+
+            // Advertising Revenue
+            enableAdvertisingRevenue: getChecked('enableAdvertisingRevenue'),
+            adRevenueStartMonth: getInt('adRevenueStartMonth'),
+            adRevenueGrowth: getVal('adRevenueGrowth') / 100,
+            
+            // Ad Types
+            enableBannerAds: getChecked('enableBannerAds'),
+            bannerECPM: getVal('bannerECPM'),
+            bannerImpressions: getVal('bannerImpressions'),
+            enableInterstitialAds: getChecked('enableInterstitialAds'),
+            interstitialECPM: getVal('interstitialECPM'),
+            interstitialImpressions: getVal('interstitialImpressions'),
+            enableRewardedAds: getChecked('enableRewardedAds'),
+            rewardedECPM: getVal('rewardedECPM'),
+            rewardedImpressions: getVal('rewardedImpressions'),
+
+            // Cost Structure
+            teamCostY1: getVal('teamCostY1'),
+            teamCostY2: getVal('teamCostY2'),
+            teamCostY3: getVal('teamCostY3'),
+            techCostY1: getVal('techCostY1'),
+            techCostY2: getVal('techCostY2'),
+            techCostY3: getVal('techCostY3'),
+            marketingCostY1: getVal('marketingCostY1'),
+            marketingCostY2: getVal('marketingCostY2'),
+            marketingCostY3: getVal('marketingCostY3'),
+
+            // Investment & Valuation
+            seedInvestment: getVal('seedInvestment'),
+            equityOffered: getVal('equityOffered') / 100,
+            valuationMultiple: getVal('valuationMultiple'),
+
+            // Advanced Features
+            enableTieredPricing: getChecked('enableTieredPricing'),
+            enableVariableCosts: getChecked('enableVariableCosts'),
+            supportCostPerUser: getVal('supportCostPerUser'),
+            infraCostPerUser: getVal('infraCostPerUser'),
+            transactionFees: getVal('transactionFees') / 100,
+
+            // Tiered Pricing
+            tiers: [
+                {
+                    name: getEl('tier0Name')?.value || 'Free',
+                    price: 0,
+                    conversionRate: 1, // All new users start here
+                    enabled: true
+                },
+                {
+                    name: getEl('tier1Name')?.value || 'Basic',
+                    price: getVal('basicPrice'),
+                    conversionRate: getVal('basicConversion') / 100,
+                    enabled: getChecked('enableTier1')
+                },
+                {
+                    name: getEl('tier2Name')?.value || 'Pro',
+                    price: getVal('proPrice'),
+                    conversionRate: getVal('proConversion') / 100,
+                    enabled: getChecked('enableTier2')
+                },
+                {
+                    name: getEl('tier3Name')?.value || 'Max',
+                    price: getVal('enterprisePrice'),
+                    conversionRate: getVal('enterpriseConversion') / 100,
+                    enabled: getChecked('enableTier3')
+                }
+            ]
+        };
+        
+        console.log("📊 Input parameters gathered:", params);
+
+        // =======================================================================================
+        // 2. RUN CORE CALCULATION LOGIC from core.js
+        // =======================================================================================
+        if (typeof window.runFinancialCalculation !== 'function') {
+            throw new Error('Core calculation engine (runFinancialCalculation) is not available.');
+        }
+        
+        const calculationResults = window.runFinancialCalculation(params);
+        console.log("📈 Calculation results received:", calculationResults);
+
+        // =======================================================================================
+        // 3. DISPLAY RESULTS from ui.js
+        // =======================================================================================
+        if (typeof window.displayFinancialResults !== 'function') {
+            throw new Error('UI display function (displayFinancialResults) is not available.');
+        }
+        
+        window.displayFinancialResults(calculationResults, isManualTrigger);
+        console.log("✅ Projections calculated and displayed successfully.");
+
+    } catch (error) {
+        console.error("An error occurred during financial calculation:", error);
+        if (isManualTrigger) {
+            alert(`An unexpected error occurred: ${error.message}\nPlease check your inputs or reset the tool.`);
+        }
+    } finally {
+        console.timeEnd('calculateProjections');
+    }
+}
+window.calculateProjections = calculateProjections;
+
+
+// =======================================================================================
+// EVENT LISTENERS & INITIALIZATION
+// =======================================================================================
+
+function testApp() {
+    console.log("Starting test app...");
+    try {
+        const testData = calculateProjections(false);
+        if (testData && testData.monthlyData.length > 0) {
+            console.log("Test data generated successfully:");
+            console.table(testData.monthlyData.slice(0, 5));
+            console.log("Summary:", testData.summaryData);
+        } else {
+            console.log("No test data generated.");
+        }
+    } catch (e) {
+        console.error("Test failed:", e);
+    }
+}
+
+
+//
+// js/ui.js
+//
+// UI Helper Functions
+// Handles DOM manipulation, form updates, and UI state
+
+function updateSliderValue(slider) {
+    // Find the display element by ID pattern - most sliders have their display element as sliderID + "Value"
+    const displayElementId = slider.id + 'Value';
+    const displayElement = document.getElementById(displayElementId);
+    
+    if (displayElement) {
+        const value = parseFloat(slider.value);
+        // Format the display value based on the slider type
+        if (slider.id.includes('Conversion') || slider.id.includes('Growth') || slider.id.includes('Churn') || 
+            slider.id.includes('annualDiscount') || slider.id.includes('Percentage') || 
+            slider.id.includes('transactionFees') || slider.id.includes('b2bPercentage') || 
+            slider.id.includes('adRevenueGrowth')) {
+            displayElement.textContent = value + '%';
+        } else if (slider.id === 'cohortLtvMultiplier' || slider.id === 'infraScaling' || 
+                   slider.id.includes('Multiple') || slider.id.includes('Multiplier')) {
+            displayElement.textContent = value + 'x';
+        } else if (slider.id === 'eCPM') {
+            displayElement.textContent = '£' + value;
+        } else {
+            displayElement.textContent = value;
+        }
+        
+        // Debug logging for important sliders
+        if (['initialConversion', 'marketingCostY1', 'marketingCostY2', 'marketingCostY3', 'transactionFees'].includes(slider.id)) {
+            console.log(`🎛️ Slider changed: ${slider.id} = ${value}${displayElement.textContent.includes('%') ? '%' : ''}`);
+        }
+    } else {
+        // Fallback: look for .range-value in the parent element (for any sliders that still use this pattern)
+        const rangeValue = slider.parentElement.querySelector('.range-value');
+        if (rangeValue) {
+            const value = parseFloat(slider.value);
+            if (slider.id.includes('Conversion') || slider.id.includes('Growth') || slider.id.includes('Churn') || 
+                slider.id.includes('annualDiscount') || slider.id.includes('Percentage') || 
+                slider.id.includes('transactionFees') || slider.id.includes('b2bPercentage')) {
+                rangeValue.textContent = value + '%';
+            } else if (slider.id === 'cohortLtvMultiplier' || slider.id === 'infraScaling' || 
+                       slider.id.includes('Multiple') || slider.id.includes('Multiplier')) {
+                rangeValue.textContent = value + 'x';
+            } else {
+                rangeValue.textContent = value;
+            }
+        } else {
+            console.warn(`⚠️ Display element not found for slider: ${slider.id} (looking for ID: ${displayElementId})`);
+        }
+    }
+}
+
+function displayResults(monthlyData, summaryData, isManualTrigger = false) {
+    console.log('📊 Rendering results...', { summaryData });
+    
+    const getEl = (id) => document.getElementById(id);
+    const setTxt = (id, text) => {
+        const el = getEl(id);
+        if (el) {
+            el.textContent = text;
+        } else {
+            console.warn(`⚠️ Element with ID '${id}' not found`);
+        }
+    };
+    
+    const safeToLocaleString = (value) => {
+        return (value && typeof value === 'number' && !isNaN(value)) ? value.toLocaleString() : '0';
+    };
+    
+    const safeCurrency = (value) => {
+        return (value && typeof value === 'number' && !isNaN(value)) ? formatCurrency(value) : '£0';
+    };
+
+    // --- 1. Update Summary Data ---
+    if (summaryData) {
+        setTxt('finalMAU', safeToLocaleString(summaryData.finalMAU));
+        setTxt('finalARR', safeCurrency(summaryData.finalARR));
+        setTxt('breakEvenMonth', summaryData.breakEvenMonth);
+        setTxt('exitValuation', safeCurrency(summaryData.exitValuation));
+        setTxt('investorReturn', summaryData.investorReturn);
+        setTxt('totalRevenue', safeCurrency(summaryData.totalRevenue));
+        setTxt('totalCosts', safeCurrency(summaryData.totalCosts));
+        setTxt('netProfit', safeCurrency(summaryData.netProfit));
+        setTxt('ltvCacRatio', summaryData.ltvCacRatio);
+        setTxt('customerLTV', safeCurrency(summaryData.customerLTV));
+        setTxt('monthlyARPU', safeCurrency(summaryData.monthlyARPU));
+        setTxt('customerCAC', safeCurrency(summaryData.customerCAC));
+        setTxt('runway', summaryData.runway);
+        setTxt('burnRate', summaryData.burnRate);
+        
+        // Update burn rate label based on value
+        const burnRateLabel = document.querySelector('.summary-item:last-child .summary-label');
+        if (burnRateLabel && summaryData.burnRate) {
+            // Extract the actual value from the burn rate string to check if positive
+            const burnValue = summaryData.burnRate.replace(/[£,/month]/g, '').replace('-', '');
+            const isPositive = !summaryData.burnRate.includes('-') && parseFloat(burnValue) > 0;
+            burnRateLabel.textContent = isPositive ? 'Current Net Profit' : 'Current Burn Rate';
+        }
+
+        // Update CAC Breakdown Card
+        setTxt('totalMarketingCosts', safeCurrency(summaryData.totalMarketingCosts));
+        setTxt('salesOverhead', safeCurrency(summaryData.salesOverhead));
+        setTxt('totalAcquisitionCosts', safeCurrency(summaryData.totalAcquisitionSpend));
+        setTxt('totalUsersAcquiredDisplay', safeToLocaleString(summaryData.totalUsersAcquired));
+        setTxt('averageCACDisplay', safeCurrency(summaryData.customerCAC));
+        setTxt('paybackPeriod', summaryData.paybackPeriod);
+        
+        // Update Variable Costs Breakdown Card
+        updateVariableCostsBreakdown(summaryData.variableCostData);
+        
+        // Update Advertising Revenue Breakdown Card
+        updateAdvertisingRevenueBreakdown(summaryData.advertisingRevenueData);
+        
+        // Update new breakdown cards
+        updateConversionRateBreakdown(summaryData.conversionBreakdown);
+        updateUserGrowthBreakdown(summaryData.userGrowthBreakdown);
+        updateTeamTechBreakdown(summaryData.teamTechBreakdown);
+        updateMarketingEfficiencyBreakdown(summaryData.marketingBreakdown);
+    }
+    
+    // --- 2. Update Monthly Table ---
+    const tieredPricingEnabled = document.getElementById('enableTieredPricing')?.checked || false;
+    const b2bEnabled = true; // For now, always show B2B column
+    
+    console.log('📊 Updating monthly table...', { dataLength: monthlyData.length, tieredPricingEnabled, b2bEnabled });
+    updateMonthlyTable(monthlyData);
+    console.log('✅ Monthly table updated successfully');
+    
+    // --- 3. Update Charts ---
+    if (typeof updateChart === 'function') {
+        updateChart(monthlyData);
+    }
+    if (typeof updateRevenueCompositionChart === 'function' && summaryData) {
+        updateRevenueCompositionChart(summaryData);
+    }
+    
+    // --- 4. Make the entire output section visible ---
+    const outputSection = getEl('outputSection');
+    if (outputSection) {
+        outputSection.style.display = 'block';
+        console.log('✅ Output section is now visible.');
+        // Scroll to the output section ONLY on manual trigger so the user sees the results
+        if (isManualTrigger) {
+            setTimeout(() => {
+                outputSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }, 100);
+        }
+    } else {
+        console.error('❌ CRITICAL: outputSection element not found. Cannot display results.');
+    }
+}
+
+function updateMonthlyTable(monthlyData) {
+    const tableBody = document.getElementById('monthlyTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+
+    const getChecked = (id) => document.getElementById(id)?.checked || false;
+    const enableTieredPricing = getChecked('enableTieredPricing');
+    const tier1Enabled = enableTieredPricing && getChecked('enableTier1');
+    const tier2Enabled = enableTieredPricing && getChecked('enableTier2');
+    const tier3Enabled = enableTieredPricing && getChecked('enableTier3');
+    const adRevenueEnabled = getChecked('enableAdvertisingRevenue');
+
+    // Update Headers
+    document.getElementById('tier1Header').style.display = tier1Enabled ? '' : 'none';
+    document.getElementById('tier2Header').style.display = tier2Enabled ? '' : 'none';
+    document.getElementById('tier3Header').style.display = tier3Enabled ? '' : 'none';
+    document.getElementById('advertisingRevenueHeader').style.display = adRevenueEnabled ? '' : 'none';
+    
+    if (tier1Enabled) document.getElementById('tier1Header').textContent = document.getElementById('tier1Name').value;
+    if (tier2Enabled) document.getElementById('tier2Header').textContent = document.getElementById('tier2Name').value;
+    if (tier3Enabled) document.getElementById('tier3Header').textContent = document.getElementById('tier3Name').value;
+
+    monthlyData.forEach(data => {
+        const row = document.createElement('tr');
+        const displayConversionRate = data.isBeta ? 'N/A' : `${(data.conversionRate * 100).toFixed(2)}%`;
+
+        row.innerHTML = `
+            <td>${data.month}</td>
+            <td>${formatNumber(data.mau)}</td>
+            <td>${(data.realizedGrowthRate || 0).toFixed(2)}%</td>
+            <td>${formatNumber(data.freeUsers)}</td>
+            <td style="display: ${tier1Enabled ? '' : 'none'};">${formatNumber(data.basicUsers)}</td>
+            <td style="display: ${tier2Enabled ? '' : 'none'};">${formatNumber(data.proUsers)}</td>
+            <td style="display: ${tier3Enabled ? '' : 'none'};">${formatNumber(data.enterpriseUsers)}</td>
+            <td>${formatNumber(data.premiumUsers)}</td>
+            <td>${displayConversionRate}</td>
+            <td>${formatCurrency(data.monthlyRevenue)}</td>
+            <td style="display: ${adRevenueEnabled ? '' : 'none'};">${formatCurrency(data.advertisingRevenue)}</td>
+            <td>${formatCurrency(data.arr)}</td>
+            <td>${formatCurrency(data.teamCost)}</td>
+            <td>${formatCurrency(data.techCost)}</td>
+            <td>${formatCurrency(data.marketingCost)}</td>
+            <td>${formatCurrency(data.variableCosts)}</td>
+            <td>${formatCurrency(data.monthlyCosts)}</td>
+            <td>${formatCurrency(data.netIncome)}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Manual test function for break-even highlighting
+function testBreakEvenHighlight() {
+    console.log('🧪 Testing break-even highlighting...');
+    const tbody = document.getElementById('monthlyTableBody');
+    if (!tbody) {
+        console.error('❌ Table body not found');
+        return;
+    }
+    
+    // Find the first row with positive net income by looking at the last cell (net income)
+    const rows = tbody.querySelectorAll('tr');
+    let foundBreakEven = false;
+    
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        const netIncomeCell = cells[cells.length - 1]; // Last column is net income
+        
+        if (netIncomeCell && !foundBreakEven) {
+            const netIncomeText = netIncomeCell.textContent.replace(/[£$,]/g, '');
+            const netIncomeNum = parseFloat(netIncomeText);
+            
+            console.log(`Row ${index + 1}: Net Income = ${netIncomeText} (${netIncomeNum})`);
+            
+            if (netIncomeNum >= 0) {
+                console.log(`🎯 Manually applying break-even highlight to row ${index + 1}`);
+                row.classList.add('breakeven-highlight');
+                row.style.backgroundColor = 'rgba(102, 126, 234, 0.4)';
+                row.style.border = '2px solid #667eea';
+                row.style.fontWeight = 'bold';
+                foundBreakEven = true;
+            }
+        }
+    });
+    
+    if (!foundBreakEven) {
+        console.log('❌ No positive net income found in any row');
+    }
+}
+
+// Toggle functions for advanced features
+function toggleTieredPricing() {
+    const isEnabled = document.getElementById('enableTieredPricing').checked;
+    const tieredPricingSection = document.getElementById('tieredPricingSection');
+    
+    if (isEnabled) {
+        tieredPricingSection.style.display = 'block';
+        // Hide single price section
+        document.getElementById('appPriceSection').style.display = 'none';
+    } else {
+        tieredPricingSection.style.display = 'none';
+        // Show single price section
+        document.getElementById('appPriceSection').style.display = 'block';
+    }
+    
+    // Recalculate if the main toggle is changed
+    if (typeof calculateProjections === 'function') {
+        calculateProjections(false);
+    }
+}
+
+function toggleTierVisibility(tierNumber, shouldRecalculate = true) {
+    const isEnabled = document.getElementById(`enableTier${tierNumber}`).checked;
+    const tierDetails = document.getElementById(`tier${tierNumber}Details`);
+    
+    if (isEnabled) {
+        tierDetails.style.display = 'block';
+    } else {
+        tierDetails.style.display = 'none';
+    }
+
+    if (shouldRecalculate) {
+        if (typeof calculateProjections === 'function') {
+            calculateProjections(false);
+        }
+    }
+}
+
+function toggleCohortTracking() {
+    console.log('Cohort tracking toggle clicked - functionality is part of core logic now.');
+}
+
+function toggleVariableCosts() {
+    const isEnabled = document.getElementById('enableVariableCosts').checked;
+    document.getElementById('variableCostsSection').style.display = isEnabled ? 'block' : 'none';
+}
+
+function toggleEnterpriseTier() {
+    const isEnabled = document.getElementById('enableEnterpriseTier').checked;
+    document.getElementById('enterpriseTierSection').style.display = isEnabled ? 'block' : 'none';
+}
+
+function toggleAdvertisingRevenue() {
+    const isEnabled = document.getElementById('enableAdvertisingRevenue').checked;
+    document.getElementById('advertisingRevenueSection').style.display = isEnabled ? 'block' : 'none';
+}
+
+function updateAdRevenueCalculation() {
+    const isEnabled = document.getElementById('enableAdvertisingRevenue').checked;
+    if (isEnabled && typeof calculateProjections === 'function') {
+        calculateProjections(false);
+    }
+}
+
+function applyAdPreset(preset) {
+    const setCheckbox = (id, checked) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = checked;
+    };
+    
+    const setSlider = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = value;
+            updateSliderValue(el);
+        }
+    };
+
+    switch (preset) {
+        case 'passive':
+            setCheckbox('enableBannerAds', true);
+            setSlider('bannerImpressions', 25);
+            setSlider('bannerECPM', 2.50);
+            
+            setCheckbox('enableInterstitialAds', false);
+            setCheckbox('enableRewardedAds', false);
+            break;
+            
+        case 'standard':
+            setCheckbox('enableBannerAds', true);
+            setSlider('bannerImpressions', 15);
+            setSlider('bannerECPM', 3.00);
+
+            setCheckbox('enableInterstitialAds', true);
+            setSlider('interstitialImpressions', 8);
+            setSlider('interstitialECPM', 12.00);
+            
+            setCheckbox('enableRewardedAds', false);
+            break;
+            
+        case 'aggressive':
+            setCheckbox('enableBannerAds', true);
+            setSlider('bannerImpressions', 10);
+            setSlider('bannerECPM', 3.50);
+            
+            setCheckbox('enableInterstitialAds', true);
+            setSlider('interstitialImpressions', 10);
+            setSlider('interstitialECPM', 15.00);
+            
+            setCheckbox('enableRewardedAds', true);
+            setSlider('rewardedImpressions', 4);
+            setSlider('rewardedECPM', 28.00);
+            break;
+    }
+    
+    // Recalculate after applying preset
+    if (typeof calculateProjections === 'function') {
+        calculateProjections(false);
+    }
+}
+
+function toggleMultipleRounds() {
+    const isEnabled = document.getElementById('enableMultipleRounds').checked;
+    const fundingRounds = document.getElementById('fundingRounds');
+    fundingRounds.style.display = isEnabled ? 'block' : 'none';
+}
+
+function addFundingRound() {
+    const container = document.getElementById('fundingRoundsContainer');
+    const roundCount = container.children.length + 1;
+    const newRound = document.createElement('div');
+    newRound.className = 'funding-round';
+    newRound.innerHTML = `
+        <h4>Round ${roundCount}</h4>
+        <label>Amount</label>
+        <input type="number" value="1000000">
+        <label>Valuation</label>
+        <input type="number" value="5000000">
+        <label>Month</label>
+        <input type="number" value="${12 * roundCount}">
+    `;
+    container.appendChild(newRound);
+}
+
+function updateAdvancedAnalyticsVisibility() {
+    const isEnabled = document.getElementById('enableAdvancedAnalytics').checked;
+    const section = document.getElementById('advancedAnalyticsSection');
+    if (section) {
+        section.style.display = isEnabled ? 'block' : 'none';
+    }
+    
+    // Make sure breakdown cards are visible if analytics enabled
+    const breakdownContainer = document.querySelector('.breakdown-container');
+    if (breakdownContainer) {
+        breakdownContainer.style.display = isEnabled ? 'grid' : 'none';
+    }
+}
+
+function setVariableCostScenario(scenario) {
+    const setSliderVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = val;
+            updateSliderValue(el);
+        }
+    };
+    
+    switch (scenario) {
+        case 'low':
+            setSliderVal('transactionFees', 1.5);
+            setSliderVal('infraScaling', 0.01);
+            setSliderVal('supportScaling', 0.20);
+            break;
+        case 'medium':
+            setSliderVal('transactionFees', 2.9);
+            setSliderVal('infraScaling', 0.03);
+            setSliderVal('supportScaling', 0.45);
+            break;
+        case 'high':
+            setSliderVal('transactionFees', 4.5);
+            setSliderVal('infraScaling', 0.06);
+            setSliderVal('supportScaling', 0.85);
+            break;
+    }
+    
+    // Recalculate
+    if (typeof calculateProjections === 'function') {
+        calculateProjections(false);
+    }
+}
+
+function updateProjectionPeriod() {
+    const months = document.getElementById('projectionPeriod').value;
+    const years = (months / 12).toFixed(1);
+    
+    // Update display next to slider
+    const display = document.getElementById('projectionPeriodValue');
+    if (display) {
+        display.textContent = `${months} months (${years} years)`;
+    }
+    
+    // Show/hide relevant year sections
+    const year2Section = document.getElementById('year2Section');
+    const year3Section = document.getElementById('year3Section');
+    
+    if (year2Section) {
+        year2Section.style.display = months >= 24 ? 'block' : 'none';
+    }
+    if (year3Section) {
+        year3Section.style.display = months >= 36 ? 'block' : 'none';
+    }
+    
+    // Enable/disable the annual cost sections
+    document.querySelectorAll('.annual-cost-input').forEach(container => {
+        const year = parseInt(container.dataset.year, 10);
+        if (months / 12 >= year) {
+            container.classList.remove('disabled');
+            container.querySelectorAll('input').forEach(input => input.disabled = false);
+        } else {
+            container.classList.add('disabled');
+            container.querySelectorAll('input').forEach(input => input.disabled = true);
+        }
+    });
+
+    // Auto-calculate to reflect the new period
+    if (typeof calculateProjections === 'function') {
+        calculateProjections(false);
+    }
+}
+
+function populateParametersSummary(params) {
+    if (!params) return;
+
+    const container = document.getElementById('parametersSummary');
+    if (!container) return;
+
+    const getParam = (value, unit = '', decimals = 0) => {
+        return (value !== undefined && value !== null) ? `${Number(value).toFixed(decimals)}${unit}` : 'N/A';
+    };
+
+    const getPercent = (value) => {
+        return getParam(value * 100, '%', 1);
+    };
+
+    container.innerHTML = `
+        <div class="summary-param-item"><strong>App Price:</strong> ${formatCurrency(params.appPrice)}</div>
+        <div class="summary-param-item"><strong>Starting MAU:</strong> ${getParam(params.startingMAU)}</div>
+        <div class="summary-param-item"><strong>Initial Conv.:</strong> ${getPercent(params.initialConversion)}</div>
+        <div class="summary-param-item"><strong>Final Conv.:</strong> ${getPercent(params.finalConversion)}</div>
+            <div class="summary-param-item"><strong>Free Churn:</strong> ${getPercent(params.freeChurnRate)}</div>
+            <div class="summary-param-item"><strong>Paid Churn:</strong> ${getPercent(params.paidChurnRate)}</div>
+            <div class="summary-param-item"><strong>Y1 Growth:</strong> ${getPercent(params.growthRates?.[1])}</div>
+            <div class="summary-param-item"><strong>Y2 Growth:</strong> ${getPercent(params.growthRates?.[2])}</div>
+            <div class="summary-param-item"><strong>Y3 Growth:</strong> ${getPercent(params.growthRates?.[3])}</div>
+            <div class="summary-param-item"><strong>Seed Funding:</strong> ${formatCurrency(params.seedInvestment)}</div>
+            <div class="summary-param-item"><strong>Equity Offered:</strong> ${getPercent(params.equityOffered)}</div>
+            <div class="summary-param-item"><strong>Exit Multiple:</strong> ${getParam(params.valuationMultiple, 'x', 1)}</div>
+        `;
+    }
+
+    // Update all breakdown cards
+    function updateCostBreakdown(costData) {
+        // This is a placeholder, as the new cards are more specific.
+        // console.log("Legacy cost breakdown update called.", costData);
+    }
+
+    function updateCACBreakdown(metrics, avgMonthlyRevenue) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+
+        setTxt('totalMarketingCosts', formatCurrency(metrics.totalMarketingCost));
+        setTxt('salesOverhead', formatCurrency(metrics.salesOverhead));
+        setTxt('totalAcquisitionCosts', formatCurrency(metrics.totalAcquisitionSpend));
+        setTxt('totalUsersAcquiredDisplay', metrics.totalUsersAcquired.toLocaleString());
+        setTxt('averageCACDisplay', formatCurrency(metrics.avgCAC));
+        setTxt('paybackPeriod', metrics.paybackPeriod);
+    }
+
+    function updateVariableCostsBreakdown(variableCostData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        
+        if (!variableCostData) return;
+
+        setTxt('totalVariableCosts', formatCurrency(variableCostData.totalVariableCosts));
+        setTxt('totalTransactionFees', formatCurrency(variableCostData.totalTransactionFees));
+        setTxt('totalInfrastructureCosts', formatCurrency(variableCostData.totalInfraCosts));
+        setTxt('totalSupportCosts', formatCurrency(variableCostData.totalSupportCosts));
+    }
+
+    function updateConversionRateBreakdown(conversionData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        if (!conversionData) return;
+        setTxt('initialConversionDisplay', `${conversionData.initial.toFixed(1)}%`);
+        setTxt('finalConversionDisplay', `${conversionData.final.toFixed(1)}%`);
+        setTxt('averageConversionDisplay', `${conversionData.average.toFixed(1)}%`);
+        setTxt('freeUserChurnDisplay', `${conversionData.freeChurn.toFixed(1)}%`);
+        setTxt('paidUserChurnDisplay', `${conversionData.paidChurn.toFixed(1)}%`);
+    }
+
+    function updateUserGrowthBreakdown(userGrowthData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        if (!userGrowthData) return;
+        setTxt('startingMAUDisplay', userGrowthData.starting.toLocaleString());
+        setTxt('finalMAUDisplay', userGrowthData.final.toLocaleString());
+        setTxt('totalUsersAcquiredGrowth', userGrowthData.totalAcquired.toLocaleString());
+        setTxt('y1GrowthDisplay', `${userGrowthData.avgGrowthY1.toFixed(1)}%`);
+        setTxt('y2GrowthDisplay', `${userGrowthData.avgGrowthY2.toFixed(1)}%`);
+        setTxt('y3GrowthDisplay', `${userGrowthData.avgGrowthY3.toFixed(1)}%`);
+    }
+
+    function updateTeamTechBreakdown(teamTechData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        if (!teamTechData) return;
+        setTxt('totalTeamCostDisplay', formatCurrency(teamTechData.totalTeamCost));
+        setTxt('totalTechCostDisplay', formatCurrency(teamTechData.totalTechCost));
+        setTxt('avgTeamCostY1Display', `${formatCurrency(teamTechData.avgTeamCostY1)}/mo`);
+        setTxt('avgTeamCostY2Display', `${formatCurrency(teamTechData.avgTeamCostY2)}/mo`);
+        setTxt('avgTeamCostY3Display', `${formatCurrency(teamTechData.avgTeamCostY3)}/mo`);
+    }
+
+    function updateMarketingEfficiencyBreakdown(marketingData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        if (!marketingData) return;
+        setTxt('totalMarketingSpendDisplay', formatCurrency(marketingData.totalMarketingCost));
+        setTxt('totalAcquiredEfficiency', marketingData.totalUsersAcquired.toLocaleString());
+        setTxt('avgCACDisplayEfficiency', formatCurrency(marketingData.avgCAC));
+        setTxt('ltvCacRatioDisplay', marketingData.ltvCacRatio);
+    }
+
+    function updateAdvertisingRevenueBreakdown(advertisingData) {
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        const card = document.getElementById('advertisingRevenueCard');
+        
+        if (!advertisingData || advertisingData.totalAdvertisingRevenue <= 0) {
+            if(card) card.style.display = 'none';
+            return;
+        }
+        
+        if(card) card.style.display = 'block';
+
+        setTxt('totalAdRevenueDisplay', formatCurrency(advertisingData.totalAdvertisingRevenue));
+        setTxt('bannerRevenueDisplay', formatCurrency(advertisingData.totalBannerRevenue));
+        setTxt('interstitialRevenueDisplay', formatCurrency(advertisingData.totalInterstitialRevenue));
+        setTxt('rewardedRevenueDisplay', formatCurrency(advertisingData.totalRewardedRevenue));
+    }
+
+
+    //
+    // js/charts.js
+    //
+    // Charts and Visualization
+    // Handles Chart.js integration and data visualization
+
+    let revenueChart = null;
+    let revenueCompositionChart = null;
+
+    function updateRevenueCompositionChart(summaryData) {
+        const ctx = document.getElementById('revenueCompositionChart');
+        const card = document.getElementById('revenueCompositionCard');
+        if (!ctx || !card) {
+            console.warn('⚠️ Revenue composition chart canvas or card not found');
+            return;
+        }
+
+        if (revenueCompositionChart) {
+            revenueCompositionChart.destroy();
+        }
+
+        const adData = summaryData?.advertisingRevenueData;
+        
+        console.log('📊 Revenue Composition Chart Data:', {
+            adData: adData,
+            totalRevenue: summaryData?.totalRevenue,
+            hasAdvertising: !!adData && adData.totalAdvertisingRevenue > 0
+        });
+
+        // Calculate subscription revenue (total revenue minus advertising revenue)
+        const totalRevenue = summaryData?.totalRevenue || 0;
+        const totalAdvertisingRevenue = adData?.totalAdvertisingRevenue || 0;
+        const subscriptionRevenue = totalRevenue - totalAdvertisingRevenue;
+
+        // Hide card if no revenue at all
+        if (totalRevenue <= 0) {
+            card.style.display = 'none';
+            console.log('📊 Hiding revenue composition chart - no revenue');
+            return;
+        }
+        
+        card.style.display = 'block';
+
+        const labels = [];
+        const data = [];
+        const backgroundColors = [];
+
+        // Always show subscription revenue if it exists
+        if (subscriptionRevenue > 0) {
+            labels.push('Subscription');
+            data.push(subscriptionRevenue);
+            backgroundColors.push('#667eea');
+        }
+        
+        // Show advertising revenue breakdown if enabled and has revenue
+        if (adData && totalAdvertisingRevenue > 0) {
+            if (adData.totalBannerRevenue > 0) {
+                labels.push('Banner Ads');
+                data.push(adData.totalBannerRevenue);
+                backgroundColors.push('#34d399');
+            }
+            if (adData.totalInterstitialRevenue > 0) {
+                labels.push('Interstitial Ads');
+                data.push(adData.totalInterstitialRevenue);
+                backgroundColors.push('#fbbf24');
+            }
+            if (adData.totalRewardedRevenue > 0) {
+                labels.push('Rewarded Ads');
+                data.push(adData.totalRewardedRevenue);
+                backgroundColors.push('#f472b6');
+            }
+        }
+
+        console.log('📊 Chart data prepared:', { labels, data, backgroundColors });
+
+        revenueCompositionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Revenue Source',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: '#1f2937',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#9ca3af',
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    title: {
+                        display: false // Title is already on the card
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += formatCurrency(context.parsed);
+                                    // Add percentage
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    label += ` (${percentage}%)`;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChart(data) {
+        const ctx = document.getElementById('projectionChart');
+        if (!ctx) {
+            console.warn('⚠️ Chart canvas not found');
+            return;
+        }
+        
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error('❌ Chart.js not loaded');
+            return;
+        }
+        
+        console.log('📊 Updating chart with data:', data?.length || 0, 'data points');
+        
+        // Ensure we have valid data
+        if (!data || data.length === 0) {
+            console.warn('⚠️ No data provided to chart');
+            return;
+        }
+
+        // Destroy existing chart
+        if (revenueChart) {
+            revenueChart.destroy();
+        }
+
+        const labels = data.map(d => d.isBeta ? `Beta ${d.month}` : `Month ${d.month}`);
+        const revenueData = data.map(d => d.monthlyRevenue || 0);
+        const costData = data.map(d => d.monthlyCosts || 0);
+        const netIncomeData = data.map(d => d.netIncome || 0);
+
+        revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Monthly Revenue',
+                        data: revenueData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: 'Monthly Costs',
+                        data: costData,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: 'Net Income',
+                        data: netIncomeData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Revenue, Costs & Net Income Over Time',
+                        color: '#fff'
+                    },
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#374151'
+                        },
+                        ticks: {
+                            color: '#9ca3af',
+                            maxTicksLimit: 12 // Limit ticks for readability
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#374151'
+                        },
+                        ticks: {
+                            color: '#9ca3af',
+                            callback: function(value) {
+                                return formatCurrency(value);
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                elements: {
+                    point: {
+                        radius: 3,
+                        hoverRadius: 6
+                    }
+                }
+            }
+        });
+    }
+
+
+    //
+    // js/scenarios.js
+    //
+    // Scenario Management
+    // Handles quick scenario loading and presets
+
+    function loadScenario(scenario) {
+        console.log(`Loading scenario: ${scenario}`);
+        
+        const setVal = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = value;
+                // Update slider display if it's a range input
+                if (el.type === 'range') {
+                    updateSliderValue(el);
+                }
+            }
+        };
+        
+        switch(scenario) {
+            case 'conservative':
+                // Lower growth, higher churn
+                document.getElementById('enableTieredPricing').checked = false;
+                setVal('appPrice', '7.99');
+                setVal('startingMAU', '500');
+                setVal('year1Growth', '12');
+                setVal('year2Growth', '8');
+                setVal('year3Growth', '5');
+                setVal('initialConversion', '1.5');
+                setVal('conversionGrowth', '10');
+                setVal('paidChurnRate', '8');
+                setVal('freeChurnRate', '25');
+                // Set tiered pricing conversion rates
+                setVal('basicConversion', '1.5');
+                setVal('proConversion', '0.6');
+                setVal('enterpriseConversion', '0.1');
+                setVal('teamCostY1', '3500');
+                setVal('teamCostY2', '8000');
+                setVal('teamCostY3', '18000');
+                setVal('marketingCostY1', '800');
+                setVal('marketingCostY2', '2500');
+                setVal('marketingCostY3', '5000');
+                // Advertising parameters - Conservative (Banner only)
+                setVal('adRevenueStartMonth', '8');
+                document.getElementById('enableAdvertisingRevenue').checked = true;
+                document.getElementById('enableBannerAds').checked = true;
+                document.getElementById('enableInterstitialAds').checked = false;
+                document.getElementById('enableRewardedAds').checked = false;
+                setVal('bannerECPM', '2.00');
+                setVal('bannerImpressions', '20');
+                setVal('adRevenueGrowth', '8');
+                break;
+                
+            case 'realistic':
+                // Balanced assumptions
+                document.getElementById('enableTieredPricing').checked = true; // Default to tiered
+                // setVal('appPrice', '9.99'); // Removed
+                setVal('startingMAU', '1000');
+                setVal('year1Growth', '16');
+                setVal('year2Growth', '12');
+                setVal('year3Growth', '8');
+                setVal('initialConversion', '2.0');
+                setVal('conversionGrowth', '20');
+                setVal('paidChurnRate', '5');
+                setVal('freeChurnRate', '20');
+                // Set tiered pricing conversion rates
+                setVal('basicConversion', '2');
+                setVal('proConversion', '0.8');
+                setVal('enterpriseConversion', '0.2');
+                setVal('teamCostY1', '4500');
+                setVal('teamCostY2', '12000');
+                setVal('teamCostY3', '25000');
+                setVal('marketingCostY1', '1200');
+                setVal('marketingCostY2', '3500');
+                setVal('marketingCostY3', '8000');
+                // Advertising parameters - Balanced (Banner + Interstitial)
+                setVal('adRevenueStartMonth', '6');
+                document.getElementById('enableAdvertisingRevenue').checked = true;
+                document.getElementById('enableBannerAds').checked = true;
+                document.getElementById('enableInterstitialAds').checked = true;
+                document.getElementById('enableRewardedAds').checked = false;
+                setVal('bannerECPM', '2.50');
+                setVal('bannerImpressions', '18');
+                setVal('interstitialECPM', '8.00');
+                setVal('interstitialImpressions', '4');
+                setVal('adRevenueGrowth', '10');
+                break;
+                
+            case 'optimistic':
+                // Higher growth, lower churn
+                document.getElementById('enableTieredPricing').checked = true; // Default to tiered
+                // setVal('appPrice', '12.99'); // Removed
+                setVal('startingMAU', '2000');
+                setVal('year1Growth', '22');
+                setVal('year2Growth', '18');
+                setVal('year3Growth', '12');
+                setVal('initialConversion', '2.8');
+                setVal('conversionGrowth', '35');
+                setVal('paidChurnRate', '3');
+                setVal('freeChurnRate', '15');
+                // Set tiered pricing conversion rates
+                setVal('basicConversion', '2.5');
+                setVal('proConversion', '1.2');
+                setVal('enterpriseConversion', '0.3');
+                setVal('teamCostY1', '6000');
+                setVal('teamCostY2', '15000');
+                setVal('teamCostY3', '35000');
+                setVal('marketingCostY1', '2000');
+                setVal('marketingCostY2', '5000');
+                setVal('marketingCostY3', '12000');
+                // Advertising parameters - Aggressive (All types)
+                setVal('adRevenueStartMonth', '4');
+                document.getElementById('enableAdvertisingRevenue').checked = true;
+                document.getElementById('enableBannerAds').checked = true;
+                document.getElementById('enableInterstitialAds').checked = true;
+                document.getElementById('enableRewardedAds').checked = true;
+                setVal('bannerECPM', '3.00');
+                setVal('bannerImpressions', '15');
+                setVal('interstitialECPM', '12.00');
+                setVal('interstitialImpressions', '6');
+                setVal('rewardedECPM', '25.00');
+                setVal('rewardedImpressions', '2');
+                setVal('adRevenueGrowth', '15');
+                break;
+                
+            case 'investor':
+                // Aggressive but achievable for fundraising
+                document.getElementById('enableTieredPricing').checked = true; // Default to tiered
+                // setVal('appPrice', '14.99'); // Removed
+                setVal('startingMAU', '1500');
+                setVal('year1Growth', '25');
+                setVal('year2Growth', '20');
+                setVal('year3Growth', '15');
+                setVal('initialConversion', '3.5');
+                setVal('conversionGrowth', '30');
+                setVal('paidChurnRate', '3.5');
+                setVal('freeChurnRate', '18');
+                // Set tiered pricing conversion rates  
+                setVal('basicConversion', '2');
+                setVal('proConversion', '1');
+                setVal('enterpriseConversion', '0.2');
+                setVal('b2bStartMonth', '4');
+                setVal('b2bPercentage', '35');
+                setVal('teamCostY1', '8000');
+                setVal('teamCostY2', '20000');
+                setVal('teamCostY3', '45000');
+                setVal('marketingCostY1', '3000');
+                setVal('marketingCostY2', '8000');
+                setVal('marketingCostY3', '18000');
+                setVal('seedInvestment', '500000');
+                setVal('equityOffered', '15');
+                setVal('valuationMultiple', '6.5');
+                // Advertising parameters - Premium (Interstitial + Rewarded)
+                setVal('adRevenueStartMonth', '3');
+                document.getElementById('enableBannerAds').checked = false;
+                document.getElementById('enableInterstitialAds').checked = true;
+                document.getElementById('enableRewardedAds').checked = true;
+                setVal('interstitialECPM', '15.00');
+                setVal('interstitialImpressions', '5');
+                setVal('rewardedECPM', '35.00');
+                setVal('rewardedImpressions', '2');
+                setVal('adRevenueGrowth', '20');
+                // Enable advertising for investor scenario
+                const enableAdvertisingCheckbox = document.getElementById('enableAdvertisingRevenue');
+                if (enableAdvertisingCheckbox) {
+                    enableAdvertisingCheckbox.checked = true;
+                    toggleAdvertisingRevenue();
+                }
+                break;
+        }
+        
+        // Toggle visibility of sections based on loaded scenario data
+        if (typeof toggleAdvertisingRevenue === 'function') toggleAdvertisingRevenue();
+        if (typeof toggleTieredPricing === 'function') toggleTieredPricing();
+        if (typeof toggleVariableCosts === 'function') toggleVariableCosts();
+
+        // Force-disable tiered pricing to ensure single-tier model is the default, which now has correct logic
+        const tieredPricingCheckbox = document.getElementById('enableTieredPricing');
+        if (tieredPricingCheckbox) {
+            tieredPricingCheckbox.checked = false;
+            if (typeof toggleTieredPricing === 'function') {
+                toggleTieredPricing();
+            }
+        }
+        
+        updateAnnualPrice();
+        // Don't auto-calculate to avoid user interruption
+        
+        console.log(`👍 Loaded '${scenario}' scenario.`);
+        // Manually trigger a recalculation after loading a scenario so user sees the result
+        setTimeout(() => {
+            if(typeof calculateProjections === 'function') {
+                calculateProjections(true);
+            }
+        }, 100);
+    }
+
+    // Save/Load Projection Functionality
+    function saveCurrentProjection() {
+        try {
+            const nameInput = document.getElementById('saveProjectionName');
+            const projectionName = nameInput?.value?.trim();
+            
+            if (!projectionName) {
+                alert('Please enter a name for your projection.');
+                return;
+            }
+            
+            // Collect all current form values
+            const formData = {};
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.id && input.type !== 'button' && input.type !== 'submit') {
+                    if (input.type === 'checkbox') {
+                        formData[input.id] = input.checked;
+                    } else {
+                        formData[input.id] = input.value;
+                    }
+                }
+            });
+            
+            // Get saved projections from localStorage
+            const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+            
+            // Save current projection
+            savedProjections[projectionName] = {
+                data: formData,
+                timestamp: new Date().toISOString(),
+                description: `Saved ${new Date().toLocaleDateString()}`
+            };
+            
+            localStorage.setItem('nutriSnapProjections', JSON.stringify(savedProjections));
+            nameInput.value = '';
+            
+            displaySavedProjections();
+            alert(`Projection "${projectionName}" saved successfully!`);
+            
+        } catch (error) {
+            console.error('❌ Error saving projection:', error);
+            alert(`Error saving projection: ${error.message}\n\nPlease try again or check browser storage limits.`);
+        }
+    }
+
+    function loadProjection(name) {
+        try {
+            const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+            const projection = savedProjections[name];
+            
+            if (!projection || !projection.data) {
+                alert('Projection not found or corrupted!');
+                return;
+            }
+            
+            const formData = projection.data;
+            
+            // Restore values to all inputs
+            Object.keys(formData).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = formData[id];
+                    } else {
+                        el.value = formData[id];
+                    }
+                    
+                    // Special handling for sliders to update their display
+                    if (el.type === 'range' && typeof updateSliderValue === 'function') {
+                        updateSliderValue(el);
+                    }
+                }
+            });
+
+            // Ensure toggled sections are correctly shown/hidden after loading
+            if (typeof toggleTieredPricing === 'function') toggleTieredPricing();
+            if (typeof toggleVariableCosts === 'function') toggleVariableCosts();
+            if (typeof toggleAdvertisingRevenue === 'function') toggleAdvertisingRevenue();
+            if (typeof updateProjectionPeriod === 'function') updateProjectionPeriod();
+            if (typeof updateAnnualPrice === 'function') updateAnnualPrice();
+            if (typeof restoreMonthlyDetailSettings === 'function') restoreMonthlyDetailSettings();
+            
+            // After loading all values, trigger a recalculation to update all charts and tables
+            if (typeof calculateProjections === 'function') {
+                setTimeout(() => {
+                    calculateProjections(true);
+                }, 100); // Small delay to ensure DOM is updated
+            }
+
+            alert(`Projection "${name}" loaded successfully.`);
+            
+        } catch (error) {
+            console.error('❌ Error loading projection:', error);
+            alert(`Error loading projection: ${error.message}`);
+        }
+    }
+
+    function deleteProjection(name) {
+        if (confirm(`Are you sure you want to delete the projection "${name}"? This cannot be undone.`)) {
+            const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+            delete savedProjections[name];
+            localStorage.setItem('nutriSnapProjections', JSON.stringify(savedProjections));
+            displaySavedProjections();
+            alert(`Projection "${name}" deleted.`);
+        }
+    }
+
+    function renameProjection(oldName) {
+        const newName = prompt(`Enter a new name for "${oldName}":`, oldName);
+        
+        if (newName && newName.trim() !== '' && newName !== oldName) {
+            const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+            
+            if (savedProjections[newName]) {
+                alert(`A projection named "${newName}" already exists. Please choose a different name.`);
+                return;
+            }
+            
+            if (savedProjections[oldName]) {
+                savedProjections[newName] = savedProjections[oldName];
+                delete savedProjections[oldName];
+                localStorage.setItem('nutriSnapProjections', JSON.stringify(savedProjections));
+                displaySavedProjections();
+                alert(`Projection renamed to "${newName}".`);
+            }
+        }
+    }
+
+    // Function to handle saving custom scenarios (placeholder)
+    function saveScenario() {
+        const scenarioName = prompt("Enter a name for your custom scenario:");
+        if (!scenarioName) return;
+
+        // In a real application, you would collect all form values
+        // and save them to localStorage under a special key.
+        
+        const formData = {};
+        const inputs = document.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            if (input.id) {
+                if (input.type === 'checkbox') {
+                    formData[input.id] = input.checked;
+                } else {
+                    formData[input.id] = input.value;
+                }
+            }
+        });
+
+        try {
+            let customScenarios = JSON.parse(localStorage.getItem('customScenarios') || '{}');
+            customScenarios[scenarioName] = formData;
+            localStorage.setItem('customScenarios', JSON.stringify(customScenarios));
+            
+            alert(`Custom scenario "${scenarioName}" saved!`);
+            // You would also need to update the UI to show this new scenario
+            updateCustomScenariosUI();
+            
+        } catch (e) {
+            alert('Error saving scenario. Storage might be full.');
+            console.error("Error saving scenario:", e);
+        }
+    }
+
+    function updateCustomScenariosUI() {
+        const container = document.getElementById('customScenariosContainer');
+        if (!container) return;
+        
+        let customScenarios;
+        try {
+            customScenarios = JSON.parse(localStorage.getItem('customScenarios') || '{}');
+        } catch (e) {
+            customScenarios = {};
+        }
+        
+        const scenarioNames = Object.keys(customScenarios);
+        
+        if(scenarioNames.length === 0) {
+            container.innerHTML = '<div>No custom scenarios saved.</div>';
+            return;
+        }
+        
+        container.innerHTML = scenarioNames.map(name => `
+            <button onclick="loadCustomScenario('${name}')" class="secondary-btn">${name}</button>
+        `).join('');
+    }
+
+    function loadCustomScenario(name) {
+        let customScenarios;
+        try {
+            customScenarios = JSON.parse(localStorage.getItem('customScenarios') || '{}');
+        } catch (e) {
+            alert('Could not load custom scenarios.');
+            return;
+        }
+
+        const scenarioData = customScenarios[name];
+        if (!scenarioData) {
+            alert(`Scenario "${name}" not found.`);
+            return;
+        }
+
+        // Load the data into the form
+        Object.keys(scenarioData).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.type === 'checkbox') {
+                    el.checked = scenarioData[id];
+                } else {
+                    el.value = scenarioData[id];
+                }
+                if (el.type === 'range') {
+                    updateSliderValue(el);
+                }
+            }
+        });
+        
+        // Trigger necessary UI updates
+        if (typeof toggleTieredPricing === 'function') toggleTieredPricing();
+        if (typeof toggleVariableCosts === 'function') toggleVariableCosts();
+        if (typeof updateProjectionPeriod === 'function') updateProjectionPeriod();
+
+        console.log(`👍 Loaded custom scenario '${name}'.`);
+        
+        // Recalculate
+        if (typeof calculateProjections === 'function') {
+            setTimeout(() => calculateProjections(true), 100);
+        }
+    }
+
+    // Initial load of saved projections and custom scenarios
+    // Moved to the main initialization block in index.html
+
+
+    //
+    // js/export.js
+    //
+    // Export Functionality
+    // Handles CSV, PDF export, and screenshot features
+
+    function exportToCSV() {
+        console.log('Exporting to CSV...');
+        const projectionName = document.getElementById('projectionName').value || 'financial_projection';
+        
+        // Determine which tiers are active
+        const getChecked = (id) => document.getElementById(id)?.checked || false;
+        const enableTieredPricing = getChecked('enableTieredPricing');
+        const tier1Enabled = enableTieredPricing && getChecked('enableTier1');
+        const tier2Enabled = enableTieredPricing && getChecked('enableTier2');
+        const tier3Enabled = enableTieredPricing && getChecked('enableTier3');
+        const adRevenueEnabled = getChecked('enableAdvertisingRevenue');
+
+        // Dynamically build headers
+        let headers = ['Month', 'MAU', 'Growth Rate (%)', 'Free Users'];
+        if (tier1Enabled) headers.push(document.getElementById('tier1Name').value || 'Basic Users');
+        if (tier2Enabled) headers.push(document.getElementById('tier2Name').value || 'Pro Users');
+        if (tier3Enabled) headers.push(document.getElementById('tier3Name').value || 'Enterprise Users');
+        headers.push('Premium Users', 'Conversion Rate', 'Monthly Revenue');
+        if (adRevenueEnabled) headers.push('Ad Revenue');
+        headers.push('ARR', 'Team Cost', 'Tech Cost', 'Marketing Cost', 'Variable Costs', 'Total Costs', 'Net Income');
+
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+
+        globalMonthlyData.forEach(data => {
+            let row = [
+                data.month,
+                data.mau,
+                (data.realizedGrowthRate || 0).toFixed(2),
+                data.freeUsers
+            ];
+
+            if (tier1Enabled) row.push(data.basicUsers);
+            if (tier2Enabled) row.push(data.proUsers);
+            if (tier3Enabled) row.push(data.enterpriseUsers);
+            
+            row.push(
+                data.premiumUsers,
+                (data.conversionRate * 100).toFixed(2),
+                data.monthlyRevenue
+            );
+
+            if (adRevenueEnabled) row.push(data.advertisingRevenue || 0);
+
+            row.push(
+                data.arr,
+                data.teamCost,
+                data.techCost,
+                data.marketingCost,
+                data.variableCosts,
+                data.monthlyCosts,
+                data.netIncome
+            );
+            
+            csvContent += row.join(",") + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${projectionName}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function exportToPDF() {
+        if (!globalMonthlyData || globalMonthlyData.length === 0) {
+            alert('No data available to export. Please run calculations first.');
+            return;
+        }
+
+        try {
+            // Check if jsPDF is loaded
+            if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+                console.error('jsPDF not loaded');
+                alert('PDF export library not loaded. Please refresh the page and try again.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Document settings
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 20;
+            let yPosition = margin;
+            
+            // Helper functions
+            const addSection = (title, fontSize = 16) => {
+                if (yPosition > pageHeight - 30) {
+                    doc.addPage();
+                    yPosition = margin;
+                }
+                doc.setFontSize(fontSize);
+                doc.setFont(undefined, 'bold');
+                doc.text(title, margin, yPosition);
+                yPosition += 10;
+            };
+            
+            const addText = (text, value = '', fontSize = 10) => {
+                if (yPosition > pageHeight - 10) {
+                    doc.addPage();
+                    yPosition = margin;
+                }
+                doc.setFontSize(fontSize);
+                doc.setFont(undefined, 'normal');
+                doc.text(text, margin, yPosition);
+                if (value) {
+                    doc.text(value, margin + 80, yPosition);
+                }
+                yPosition += 6;
+            };
+            
+            // Title Page
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('NutriSnap Financial Forecast', margin, yPosition);
+            yPosition += 15;
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, margin, yPosition);
+            yPosition += 20;
+            
+            // Get summary data from the displayed results or global data
+            const summary = globalSummaryData || {};
+            const params = summary.parameters || {};
+            
+            // Executive Summary
+            addSection('Executive Summary');
+            addText('Final MAU:', (summary.finalMAU || 0).toLocaleString());
+            addText('Final ARR:', formatCurrency(summary.finalARR || 0));
+            addText('Break-even Month:', summary.breakEvenMonth || 'Not Reached');
+            addText('Total Revenue:', formatCurrency(summary.totalRevenue || 0));
+            addText('Total Costs:', formatCurrency(summary.totalCosts || 0));
+            addText('Net Profit/Loss:', formatCurrency(summary.netProfit || 0));
+            addText('Exit Valuation:', formatCurrency(summary.exitValuation || 0));
+            addText('Runway:', summary.runway || 'N/A');
+            yPosition += 10;
+            
+            // Key Parameters
+            addSection('Key Parameters');
+            addText('App Price:', formatCurrency(params.appPrice || 0) + '/month');
+            addText('Initial Conversion Rate:', ((params.initialConversion || 0) * 100).toFixed(1) + '%');
+            addText('Year 1 Growth Rate:', ((params.growthRates?.[1] || 0) * 100).toFixed(1) + '%');
+            addText('Free User Churn:', ((params.freeChurnRate || 0) * 100).toFixed(1) + '%');
+            addText('Paid User Churn:', ((params.paidChurnRate || 0) * 100).toFixed(1) + '%');
+            addText('Seed Investment:', formatCurrency(params.seedInvestment || 0));
+            addText('Equity Offered:', ((params.equityOffered || 0) * 100).toFixed(1) + '%');
+            yPosition += 10;
+            
+            // CAC Breakdown
+            addSection('Customer Acquisition Metrics');
+            addText('Customer LTV:', formatCurrency(summary.customerLTV || 0));
+            addText('Customer CAC:', formatCurrency(summary.customerCAC || 0));
+            addText('Monthly ARPU:', formatCurrency(summary.monthlyARPU || 0));
+            addText('Total Marketing Costs:', formatCurrency(summary.totalMarketingCosts || 0));
+            addText('Sales Overhead (20%):', formatCurrency(summary.salesOverhead || 0));
+            addText('Total Users Acquired:', (summary.totalUsersAcquired || 0).toLocaleString());
+            addText('Payback Period:', summary.paybackPeriod || 'N/A');
+            yPosition += 10;
+            
+            // Monthly Data Table (if autoTable is available)
+            if (typeof window.jsPDFAutoTable !== 'undefined' || doc.autoTable) {
+                addSection('Monthly Projections Summary');
+                
+                // Show first 12 months + key milestones
+                const keyMonths = globalMonthlyData.filter((row, index) => {
+                    return index < 12 || row.netIncome >= 0 && globalMonthlyData[index-1]?.netIncome < 0;
+                }).slice(0, 24); // Limit to prevent table overflow
+                
+                const tableData = keyMonths.map(row => [
+                    row.isBeta ? `Beta ${row.month}` : `M${row.month}`,
+                    (row.mau || 0).toLocaleString(),
+                    `${(((row.realizedGrowthRate !== undefined ? row.realizedGrowthRate : row.growthRate) || 0) * 100).toFixed(1)}%`,
+                    (row.premiumUsers || 0).toLocaleString(),
+                    `${((row.conversionRate || 0) * 100).toFixed(1)}%`,
+                    formatCurrency(row.monthlyRevenue || 0),
+                    formatCurrency(row.monthlyCosts || 0),
+                    formatCurrency(row.netIncome || 0)
+                ]);
+                
+                try {
+                    doc.autoTable({
+                        head: [['Month', 'MAU', 'Growth', 'Premium', 'Conv.', 'Revenue', 'Costs', 'Net Income']],
+                        body: tableData,
+                        startY: yPosition,
+                        styles: { fontSize: 8, cellPadding: 2 },
+                        headStyles: { fillColor: [102, 126, 234], fontSize: 9 },
+                        alternateRowStyles: { fillColor: [248, 249, 250] },
+                        margin: { left: margin, right: margin },
+                        columnStyles: {
+                            0: { cellWidth: 15 },
+                            1: { cellWidth: 20 },
+                            2: { cellWidth: 15 },
+                            3: { cellWidth: 20 },
+                            4: { cellWidth: 15 },
+                            5: { cellWidth: 25 },
+                            6: { cellWidth: 25 },
+                            7: { cellWidth: 25 }
+                        }
+                    });
+                    
+                    yPosition = doc.lastAutoTable.finalY + 10;
+                } catch (tableError) {
+                    console.warn('AutoTable failed, skipping table:', tableError);
+                    addText('Monthly table data available in CSV export.');
+                }
+            } else {
+                addText('For detailed monthly breakdown, please use the CSV export option.');
+            }
+            
+            // Footer
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'italic');
+            doc.text('Generated by NutriSnap Financial Forecast Tool', margin, pageHeight - 10);
+            
+            // Save the PDF
+            const fileName = `nutrisnap-financial-forecast-${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            
+            console.log('✅ PDF export completed:', fileName);
+            
+        } catch (error) {
+            console.error('❌ PDF export error:', error);
+            alert('Error generating PDF. Please try again or use CSV export.');
+        }
+    }
+
+    function exportScreenshot() {
+        if (typeof html2canvas === 'undefined') {
+            alert('Screenshot library not loaded. Please refresh the page and try again.');
+            return;
+        }
+        
+        const outputSection = document.getElementById('outputSection');
+        if (!outputSection) {
+            alert('No results to screenshot. Please run a projection first.');
+            return;
+        }
+        
+        // Show loading state
+        const originalButton = event.target;
+        const originalText = originalButton.textContent;
+        originalButton.textContent = '📸 Capturing...';
+        originalButton.disabled = true;
+
+        // Use a timeout to allow the DOM to update before taking the screenshot
+        setTimeout(() => {
+            html2canvas(outputSection, {
+                backgroundColor: '#111827', // Match the body background
+                scale: 2, // Improve quality
+                useCORS: true,
+                onclone: (document) => {
+                    // Ensure chart is rendered correctly in the cloned document
+                    const originalCanvas = outputSection.querySelector('#projectionChart');
+                    const clonedCanvas = document.querySelector('#projectionChart');
+                    if (originalCanvas && clonedCanvas) {
+                        clonedCanvas.getContext('2d').drawImage(originalCanvas, 0, 0);
+                    }
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `nutrisnap-forecast-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                
+                // Restore button state
+                originalButton.textContent = originalText;
+                originalButton.disabled = false;
+            }).catch(err => {
+                console.error('Screenshot failed:', err);
+                alert('Could not capture screenshot. Please try again.');
+                originalButton.textContent = originalText;
+                originalButton.disabled = false;
+            });
+        }, 200);
+    }
+
+    function takeScreenshot() {
+        const outputSection = document.getElementById('outputSection');
+        if (!outputSection) {
+            alert('Nothing to capture. Please run a projection first.');
+            return;
+        }
+
+        html2canvas(outputSection, {
+            backgroundColor: '#121212',
+            scale: 2,
+            logging: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'financial-projection.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    } 

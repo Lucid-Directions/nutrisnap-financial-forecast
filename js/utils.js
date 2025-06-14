@@ -10,12 +10,21 @@ function formatCurrency(amount) {
         maximumFractionDigits: 0
     }).format(amount);
 }
+window.formatCurrency = formatCurrency;
+
+// Number formatting utility
+function formatNumber(number) {
+    if (typeof number !== 'number' || isNaN(number)) return '0';
+    return number.toLocaleString();
+}
+window.formatNumber = formatNumber;
 
 // Cost management placeholders for future implementation
 function updateCostBreakdown(yearCosts) {
     console.log('🏗️ Updating cost breakdown with:', yearCosts);
     // Placeholder for cost breakdown display
 }
+window.updateCostBreakdown = updateCostBreakdown;
 
 // Placeholder functions for advanced features
 function updateCostStructureVisibility() {
@@ -26,10 +35,12 @@ function updateCostStructureVisibility() {
     }
     // Placeholder for cost structure visibility logic
 }
+window.updateCostStructureVisibility = updateCostStructureVisibility;
 
 function updateAnnualCostDisplays() {
     // Placeholder for annual cost display updates
 }
+window.updateAnnualCostDisplays = updateAnnualCostDisplays;
 
 // Placeholder for saving/loading functionality
 function displaySavedProjections() {
@@ -63,17 +74,20 @@ function displaySavedProjections() {
         `;
     }).join('');
 }
+window.displaySavedProjections = displaySavedProjections;
 
 // Cost management tab functions (placeholders)
 function switchCostTab(tabName) {
     console.log(`Switching to cost tab: ${tabName}`);
     // Placeholder for tab switching logic
 }
+window.switchCostTab = switchCostTab;
 
 function applyMarketingStrategy(phase) {
     console.log(`Applying marketing strategy: ${phase}`);
     // Placeholder for marketing strategy logic
 }
+window.applyMarketingStrategy = applyMarketingStrategy;
 
 // Monthly cost editor functions
 function toggleMonthlyTeamCosts() {
@@ -94,6 +108,7 @@ function toggleMonthlyTeamCosts() {
         triggerRecalculation();
     }
 }
+window.toggleMonthlyTeamCosts = toggleMonthlyTeamCosts;
 
 function toggleMonthlyTechCosts() {
     const checkbox = document.getElementById('enableMonthlyTechCosts');
@@ -113,6 +128,7 @@ function toggleMonthlyTechCosts() {
         triggerRecalculation();
     }
 }
+window.toggleMonthlyTechCosts = toggleMonthlyTechCosts;
 
 function toggleMonthlyMarketingCosts() {
     const checkbox = document.getElementById('enableMonthlyMarketingCosts');
@@ -132,6 +148,7 @@ function toggleMonthlyMarketingCosts() {
         triggerRecalculation();
     }
 }
+window.toggleMonthlyMarketingCosts = toggleMonthlyMarketingCosts;
 
 function openMonthlyEditor(type) {
     const projectionMonths = parseInt(document.getElementById('projectionPeriod')?.value) || 36;
@@ -202,6 +219,7 @@ function openMonthlyEditor(type) {
     // Add modal to page
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
+window.openMonthlyEditor = openMonthlyEditor;
 
 function getDefaultCost(type, year) {
     const costMappings = {
@@ -215,6 +233,7 @@ function getDefaultCost(type, year) {
     
     return costs[Math.min(year, 3)] || costs[3];
 }
+window.getDefaultCost = getDefaultCost;
 
 function closeMonthlyEditor() {
     const modal = document.getElementById('monthlyEditorModal');
@@ -222,6 +241,7 @@ function closeMonthlyEditor() {
         modal.remove();
     }
 }
+window.closeMonthlyEditor = closeMonthlyEditor;
 
 function saveMonthlyEditor(type) {
     const projectionMonths = parseInt(document.getElementById('projectionPeriod')?.value) || 36;
@@ -251,6 +271,7 @@ function saveMonthlyEditor(type) {
         calculateProjections(false);
     }
 }
+window.saveMonthlyEditor = saveMonthlyEditor;
 
 // Load monthly costs from localStorage
 function loadMonthlyCustomCosts() {
@@ -265,6 +286,7 @@ function loadMonthlyCustomCosts() {
         window.monthlyCustomCosts = {};
     }
 }
+window.loadMonthlyCustomCosts = loadMonthlyCustomCosts;
 
 // Load monthly costs and checkbox states on page load
 function restoreMonthlyDetailSettings() {
@@ -285,6 +307,7 @@ function restoreMonthlyDetailSettings() {
         }
     });
 }
+window.restoreMonthlyDetailSettings = restoreMonthlyDetailSettings;
 
 // Save checkbox states
 function saveMonthlyDetailCheckboxStates() {
@@ -297,6 +320,7 @@ function saveMonthlyDetailCheckboxStates() {
     });
     localStorage.setItem('monthlyDetailCheckboxes', JSON.stringify(states));
 }
+window.saveMonthlyDetailCheckboxStates = saveMonthlyDetailCheckboxStates;
 
 // Helper function to clean up monthly custom costs when disabled
 function clearMonthlyCustomCosts(type) {
@@ -312,6 +336,7 @@ function clearMonthlyCustomCosts(type) {
         console.log(`✅ Monthly ${lowerType} custom costs cleared and saved`);
     }
 }
+window.clearMonthlyCustomCosts = clearMonthlyCustomCosts;
 
 // Helper function to trigger recalculation with proper timing
 function triggerRecalculation() {
@@ -325,16 +350,109 @@ function triggerRecalculation() {
         }
     }, 100);
 }
+window.triggerRecalculation = triggerRecalculation;
 
-// Make functions globally available
-window.toggleMonthlyTeamCosts = toggleMonthlyTeamCosts;
-window.toggleMonthlyTechCosts = toggleMonthlyTechCosts;
-window.toggleMonthlyMarketingCosts = toggleMonthlyMarketingCosts;
-window.openMonthlyEditor = openMonthlyEditor;
-window.closeMonthlyEditor = closeMonthlyEditor;
-window.saveMonthlyEditor = saveMonthlyEditor;
-window.loadMonthlyCustomCosts = loadMonthlyCustomCosts;
-window.restoreMonthlyDetailSettings = restoreMonthlyDetailSettings;
-window.saveMonthlyDetailCheckboxStates = saveMonthlyDetailCheckboxStates;
-window.clearMonthlyCustomCosts = clearMonthlyCustomCosts;
-window.triggerRecalculation = triggerRecalculation; 
+// Missing utility functions that are referenced elsewhere
+function updateAnnualPrice() {
+    const appPrice = parseFloat(document.getElementById('appPrice')?.value) || 0;
+    const annualDiscount = parseFloat(document.getElementById('annualDiscount')?.value) || 0;
+    
+    const annualPrice = appPrice * 12 * (1 - annualDiscount / 100);
+    const annualPriceDisplay = document.getElementById('annualPriceDisplay');
+    
+    if (annualPriceDisplay) {
+        annualPriceDisplay.innerHTML = `
+            <strong>Effective Annual Price: ${formatCurrency(annualPrice)}</strong>
+            <small>Monthly price × 12 months × (1 - ${annualDiscount}% discount)</small>
+        `;
+    }
+    
+    console.log(`💰 Annual price updated: ${formatCurrency(annualPrice)} (Monthly: ${formatCurrency(appPrice)}, Discount: ${annualDiscount}%)`);
+}
+window.updateAnnualPrice = updateAnnualPrice;
+
+// Safely get form values
+function getFormValue(id, defaultValue = 0) {
+    const element = document.getElementById(id);
+    if (!element) return defaultValue;
+    
+    const value = parseFloat(element.value);
+    return isNaN(value) ? defaultValue : value;
+}
+window.getFormValue = getFormValue;
+
+// Safely check if checkbox is checked
+function isFormChecked(id) {
+    const element = document.getElementById(id);
+    return element ? element.checked : false;
+}
+window.isFormChecked = isFormChecked;
+
+// Set form value safely
+function setFormValue(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.value = value;
+        // Trigger change event for sliders
+        if (element.type === 'range' && typeof updateSliderValue === 'function') {
+            updateSliderValue(element);
+        }
+    }
+}
+window.setFormValue = setFormValue;
+
+// Initialize form event listeners
+function initializeFormListeners() {
+    // Add listener for annual price updates
+    ['appPrice', 'annualDiscount'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateAnnualPrice);
+            element.addEventListener('change', updateAnnualPrice);
+        }
+    });
+    
+    console.log('✅ Form listeners initialized');
+}
+window.initializeFormListeners = initializeFormListeners;
+
+// Initialize monthly cost toggles when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Initialize the toggle functions
+        window.toggleMonthlyTeamCosts = toggleMonthlyTeamCosts;
+        window.toggleMonthlyTechCosts = toggleMonthlyTechCosts;
+        window.toggleMonthlyMarketingCosts = toggleMonthlyMarketingCosts;
+        
+        // Add event listeners to the checkboxes
+        const teamCheckbox = document.getElementById('enableMonthlyTeamCosts');
+        const techCheckbox = document.getElementById('enableMonthlyTechCosts');
+        const marketingCheckbox = document.getElementById('enableMonthlyMarketingCosts');
+        
+        if (teamCheckbox) {
+            teamCheckbox.removeEventListener('change', toggleMonthlyTeamCosts);
+            teamCheckbox.addEventListener('change', toggleMonthlyTeamCosts);
+        }
+        
+        if (techCheckbox) {
+            techCheckbox.removeEventListener('change', toggleMonthlyTechCosts);
+            techCheckbox.addEventListener('change', toggleMonthlyTechCosts);
+        }
+        
+        if (marketingCheckbox) {
+            marketingCheckbox.removeEventListener('change', toggleMonthlyMarketingCosts);
+            marketingCheckbox.addEventListener('change', toggleMonthlyMarketingCosts);
+        }
+        
+        // Restore any saved states
+        restoreMonthlyDetailSettings();
+        
+        console.log('✅ Monthly cost toggles initialized');
+    } catch (error) {
+        console.error('Error initializing monthly cost toggles:', error);
+    }
+});
+
+// Signal that all utility functions are loaded and ready
+window.utilsReady = true;
+console.log('✅ All utility functions loaded and ready.');

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSnap Financial Forecast - Test Suite</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section h2 {
+            color: #667eea;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-case {
+            background: #0f0f0f;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .test-case.failed {
+            border-left-color: #ef4444;
+        }
+        .test-case.warning {
+            border-left-color: #f59e0b;
+        }
+        .test-case h3 {
+            margin: 0 0 10px 0;
+            color: #e5e7eb;
+        }
+        .test-result {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .passed {
+            background: #10b981;
+            color: white;
+        }
+        .failed {
+            background: #ef4444;
+            color: white;
+        }
+        .warning {
+            background: #f59e0b;
+            color: black;
+        }
+        .test-details {
+            margin-top: 10px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .run-all {
+            background: #10b981;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        #testResults {
+            margin-top: 20px;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .metric {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        .code-block {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="summary">
+            <h1>🧪 NutriSnap Financial Forecast Test Suite</h1>
+            <p>Comprehensive testing framework to validate all application features</p>
+            <div>
+                <span class="metric">Tests: <span id="totalTests">0</span></span>
+                <span class="metric">Passed: <span id="passedTests">0</span></span>
+                <span class="metric">Failed: <span id="failedTests">0</span></span>
+                <span class="metric">Warnings: <span id="warningTests">0</span></span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button class="run-all" onclick="runAllTests()">🚀 Run All Tests</button>
+            <button onclick="runCoreTests()">Test Core Engine</button>
+            <button onclick="runUITests()">Test UI Functions</button>
+            <button onclick="runCalculationTests()">Test Calculations</button>
+            <button onclick="runExportTests()">Test Export Features</button>
+            <button onclick="runScenarioTests()">Test Scenarios</button>
+        </div>
+
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        let testStats = { total: 0, passed: 0, failed: 0, warnings: 0 };
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = testStats.total;
+            document.getElementById('passedTests').textContent = testStats.passed;
+            document.getElementById('failedTests').textContent = testStats.failed;
+            document.getElementById('warningTests').textContent = testStats.warnings;
+        }
+
+        function addTestResult(sectionId, testName, passed, details = '', isWarning = false) {
+            testStats.total++;
+            if (passed && !isWarning) {
+                testStats.passed++;
+            } else if (isWarning) {
+                testStats.warnings++;
+            } else {
+                testStats.failed++;
+            }
+
+            const section = document.getElementById(sectionId);
+            const testCase = document.createElement('div');
+            testCase.className = `test-case ${passed ? (isWarning ? 'warning' : '') : 'failed'}`;
+            
+            const status = passed ? (isWarning ? 'warning' : 'passed') : 'failed';
+            const statusText = passed ? (isWarning ? 'WARNING' : 'PASSED') : 'FAILED';
+            
+            testCase.innerHTML = `
+                <h3>${testName}</h3>
+                <div class="test-result ${status}">${statusText}</div>
+                <div class="test-details">${details}</div>
+            `;
+            section.appendChild(testCase);
+            updateStats();
+        }
+
+        function createTestSection(title, id) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h2>${title}</h2>`;
+            section.id = id;
+            document.getElementById('testResults').appendChild(section);
+            return section;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            testStats = { total: 0, passed: 0, failed: 0, warnings: 0 };
+            updateStats();
+        }
+
+        // Core Engine Tests
+        function runCoreTests() {
+            clearResults();
+            const section = createTestSection('🔧 Core Engine Tests', 'coreTests');
+
+            // Test if main HTML file can be opened directly
+            const hasMainElements = document.createElement('iframe');
+            hasMainElements.src = './index.html';
+            hasMainElements.style.display = 'none';
+            document.body.appendChild(hasMainElements);
+
+            setTimeout(() => {
+                try {
+                    const iframeDoc = hasMainElements.contentDocument || hasMainElements.contentWindow.document;
+                    
+                    // Test 1: HTML Structure
+                    const appPriceInput = iframeDoc.getElementById('appPrice');
+                    const calculateBtn = iframeDoc.getElementById('calculateBtn');
+                    const outputSection = iframeDoc.getElementById('outputSection');
+                    
+                    addTestResult('coreTests', 'HTML Structure Validation', 
+                        !!(appPriceInput && calculateBtn && outputSection),
+                        `App Price Input: ${!!appPriceInput}, Calculate Button: ${!!calculateBtn}, Output Section: ${!!outputSection}`);
+
+                    // Test 2: JavaScript Loading
+                    const hasCalculateFunction = typeof iframeDoc.defaultView.calculateProjections === 'function';
+                    const hasFormatCurrency = typeof iframeDoc.defaultView.formatCurrency === 'function';
+                    
+                    addTestResult('coreTests', 'Core JavaScript Functions', 
+                        hasCalculateFunction && hasFormatCurrency,
+                        `calculateProjections: ${hasCalculateFunction}, formatCurrency: ${hasFormatCurrency}`);
+
+                    // Test 3: Default Parameter Validation
+                    if (appPriceInput) {
+                        const defaultPrice = parseFloat(appPriceInput.value);
+                        addTestResult('coreTests', 'Default Parameters Set', 
+                            defaultPrice > 0,
+                            `Default app price: £${defaultPrice}. Should be > 0 for valid calculations.`);
+                    }
+
+                    // Test 4: Input Validation
+                    let inputValidation = true;
+                    let inputDetails = [];
+                    
+                    const requiredInputs = [
+                        'startingMAU', 'year1Growth', 'year2Growth', 'year3Growth',
+                        'initialConversion', 'finalConversion', 'freeChurnRate', 'paidChurnRate'
+                    ];
+                    
+                    requiredInputs.forEach(id => {
+                        const input = iframeDoc.getElementById(id);
+                        if (!input) {
+                            inputValidation = false;
+                            inputDetails.push(`Missing: ${id}`);
+                        } else {
+                            const value = parseFloat(input.value);
+                            if (isNaN(value) || value < 0) {
+                                inputValidation = false;
+                                inputDetails.push(`Invalid value for ${id}: ${input.value}`);
+                            }
+                        }
+                    });
+
+                    addTestResult('coreTests', 'Required Input Elements', 
+                        inputValidation,
+                        inputValidation ? 'All required inputs present and valid' : inputDetails.join('; '));
+
+                    // Test 5: Chart Dependencies
+                    const hasChartJS = typeof iframeDoc.defaultView.Chart !== 'undefined';
+                    addTestResult('coreTests', 'Chart.js Library Loading', 
+                        hasChartJS,
+                        `Chart.js available: ${hasChartJS}`);
+
+                    // Test 6: Export Dependencies
+                    const hasJsPDF = typeof iframeDoc.defaultView.jspdf !== 'undefined';
+                    const hasHtml2Canvas = typeof iframeDoc.defaultView.html2canvas !== 'undefined';
+                    addTestResult('coreTests', 'Export Libraries Loading', 
+                        hasJsPDF && hasHtml2Canvas,
+                        `jsPDF: ${hasJsPDF}, html2canvas: ${hasHtml2Canvas}`);
+
+                } catch (error) {
+                    addTestResult('coreTests', 'Core Test Execution', false, `Error: ${error.message}`);
+                }
+
+                document.body.removeChild(hasMainElements);
+            }, 2000);
+        }
+
+        // UI Tests
+        function runUITests() {
+            clearResults();
+            const section = createTestSection('🎨 UI Function Tests', 'uiTests');
+
+            const iframe = document.createElement('iframe');
+            iframe.src = './index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const win = iframe.contentWindow;
+
+                    // Test 1: Slider Update Function
+                    const hasUpdateSliderValue = typeof win.updateSliderValue === 'function';
+                    addTestResult('uiTests', 'Slider Update Function', 
+                        hasUpdateSliderValue,
+                        `updateSliderValue function: ${hasUpdateSliderValue}`);
+
+                    // Test 2: Toggle Functions
+                    const toggleFunctions = [
+                        'toggleTieredPricing',
+                        'toggleAdvertisingRevenue', 
+                        'toggleVariableCosts'
+                    ];
+                    
+                    let togglesValid = true;
+                    let toggleDetails = [];
+                    
+                    toggleFunctions.forEach(func => {
+                        const exists = typeof win[func] === 'function';
+                        if (!exists) {
+                            togglesValid = false;
+                            toggleDetails.push(`Missing: ${func}`);
+                        }
+                    });
+
+                    addTestResult('uiTests', 'Toggle Functions Available', 
+                        togglesValid,
+                        togglesValid ? 'All toggle functions present' : toggleDetails.join('; '));
+
+                    // Test 3: Form Element Interaction
+                    const tieredPricingCheckbox = iframeDoc.getElementById('enableTieredPricing');
+                    if (tieredPricingCheckbox && win.toggleTieredPricing) {
+                        tieredPricingCheckbox.checked = true;
+                        win.toggleTieredPricing();
+                        
+                        const tieredSection = iframeDoc.getElementById('tieredPricingSection');
+                        const sectionVisible = tieredSection && tieredSection.style.display !== 'none';
+                        
+                        addTestResult('uiTests', 'Tiered Pricing Toggle', 
+                            sectionVisible,
+                            `Section visibility after toggle: ${sectionVisible}`);
+                    }
+
+                    // Test 4: Scenario Functions
+                    const hasLoadScenario = typeof win.loadScenario === 'function';
+                    const hasSaveScenario = typeof win.saveScenario === 'function';
+                    
+                    addTestResult('uiTests', 'Scenario Management Functions', 
+                        hasLoadScenario && hasSaveScenario,
+                        `loadScenario: ${hasLoadScenario}, saveScenario: ${hasSaveScenario}`);
+
+                    // Test 5: Monthly Table Update
+                    const hasUpdateMonthlyTable = typeof win.updateMonthlyTable === 'function';
+                    addTestResult('uiTests', 'Monthly Table Update Function', 
+                        hasUpdateMonthlyTable,
+                        `updateMonthlyTable function: ${hasUpdateMonthlyTable}`);
+
+                } catch (error) {
+                    addTestResult('uiTests', 'UI Test Execution', false, `Error: ${error.message}`);
+                }
+
+                document.body.removeChild(iframe);
+            }, 2000);
+        }
+
+        // Calculation Tests
+        function runCalculationTests() {
+            clearResults();
+            const section = createTestSection('🧮 Calculation Tests', 'calcTests');
+
+            const iframe = document.createElement('iframe');
+            iframe.src = './index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const win = iframe.contentWindow;
+
+                    // Test 1: Basic Calculation Execution
+                    if (typeof win.calculateProjections === 'function') {
+                        // Set test parameters
+                        iframeDoc.getElementById('appPrice').value = '9.99';
+                        iframeDoc.getElementById('startingMAU').value = '1000';
+                        iframeDoc.getElementById('projectionPeriod').value = '12';
+                        
+                        // Run calculation
+                        win.calculateProjections(true);
+                        
+                        setTimeout(() => {
+                            const outputSection = iframeDoc.getElementById('outputSection');
+                            const finalMAU = iframeDoc.getElementById('finalMAU');
+                            const finalARR = iframeDoc.getElementById('finalARR');
+                            
+                            const calculationWorked = outputSection && 
+                                outputSection.style.display !== 'none' &&
+                                finalMAU && finalMAU.textContent !== '-' &&
+                                finalARR && finalARR.textContent !== '-';
+                            
+                            addTestResult('calcTests', 'Basic Calculation Execution', 
+                                calculationWorked,
+                                `Output visible: ${outputSection?.style.display !== 'none'}, Final MAU: ${finalMAU?.textContent}, Final ARR: ${finalARR?.textContent}`);
+
+                            // Test 2: Parameter Validation
+                            const finalMAUNum = parseInt(finalMAU?.textContent?.replace(/,/g, '') || '0');
+                            const growthExpected = finalMAUNum > 1000; // Should be higher than starting MAU
+                            
+                            addTestResult('calcTests', 'Growth Calculation Logic', 
+                                growthExpected,
+                                `Starting MAU: 1000, Final MAU: ${finalMAUNum}. Growth achieved: ${growthExpected}`,
+                                finalMAUNum < 1000);
+
+                            // Test 3: Revenue Calculation
+                            const finalARRText = finalARR?.textContent || '£0';
+                            const finalARRNum = parseFloat(finalARRText.replace(/[£,]/g, ''));
+                            const revenuePositive = finalARRNum > 0;
+                            
+                            addTestResult('calcTests', 'Revenue Generation', 
+                                revenuePositive,
+                                `Final ARR: ${finalARRText}. Positive revenue: ${revenuePositive}`);
+
+                            // Test 4: Break-even Analysis
+                            const breakEvenElement = iframeDoc.getElementById('breakEvenMonth');
+                            const breakEvenText = breakEvenElement?.textContent || 'Not Reached';
+                            const hasBreakEven = breakEvenText !== 'Not Reached' && breakEvenText !== '-';
+                            
+                            addTestResult('calcTests', 'Break-even Analysis', 
+                                true, // Always pass, but note if break-even reached
+                                `Break-even: ${breakEvenText}`,
+                                !hasBreakEven);
+
+                            // Test 5: Table Population
+                            const tableBody = iframeDoc.getElementById('monthlyTableBody');
+                            const tableHasRows = tableBody && tableBody.children.length > 0;
+                            
+                            addTestResult('calcTests', 'Monthly Data Table', 
+                                tableHasRows,
+                                `Table rows generated: ${tableBody?.children.length || 0}`);
+
+                        }, 1000);
+                    } else {
+                        addTestResult('calcTests', 'Calculate Function Available', false, 'calculateProjections function not found');
+                    }
+
+                } catch (error) {
+                    addTestResult('calcTests', 'Calculation Test Execution', false, `Error: ${error.message}`);
+                }
+
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 3000);
+            }, 2000);
+        }
+
+        // Export Tests
+        function runExportTests() {
+            clearResults();
+            const section = createTestSection('📊 Export Feature Tests', 'exportTests');
+
+            const iframe = document.createElement('iframe');
+            iframe.src = './index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const win = iframe.contentWindow;
+
+                    // Test 1: Export Functions Exist
+                    const exportFunctions = ['exportToCSV', 'exportToPDF', 'exportScreenshot'];
+                    let allExportFunctionsExist = true;
+                    let missingFunctions = [];
+
+                    exportFunctions.forEach(func => {
+                        if (typeof win[func] !== 'function') {
+                            allExportFunctionsExist = false;
+                            missingFunctions.push(func);
+                        }
+                    });
+
+                    addTestResult('exportTests', 'Export Functions Available', 
+                        allExportFunctionsExist,
+                        allExportFunctionsExist ? 'All export functions present' : `Missing: ${missingFunctions.join(', ')}`);
+
+                    // Test 2: PDF Dependencies
+                    const hasJsPDF = typeof win.jspdf !== 'undefined';
+                    const hasAutoTable = typeof win.jsPDFAutoTable !== 'undefined';
+                    
+                    addTestResult('exportTests', 'PDF Export Dependencies', 
+                        hasJsPDF,
+                        `jsPDF: ${hasJsPDF}, AutoTable: ${hasAutoTable}`,
+                        !hasAutoTable);
+
+                    // Test 3: Screenshot Dependencies  
+                    const hasHtml2Canvas = typeof win.html2canvas !== 'undefined';
+                    addTestResult('exportTests', 'Screenshot Dependencies', 
+                        hasHtml2Canvas,
+                        `html2canvas: ${hasHtml2Canvas}`);
+
+                    // Test 4: CSV Export Logic (without triggering download)
+                    if (typeof win.exportToCSV === 'function' && win.globalMonthlyData) {
+                        const csvTestPassed = Array.isArray(win.globalMonthlyData);
+                        addTestResult('exportTests', 'CSV Data Availability', 
+                            csvTestPassed,
+                            `Global monthly data available: ${csvTestPassed}, Records: ${win.globalMonthlyData?.length || 0}`);
+                    }
+
+                } catch (error) {
+                    addTestResult('exportTests', 'Export Test Execution', false, `Error: ${error.message}`);
+                }
+
+                document.body.removeChild(iframe);
+            }, 2000);
+        }
+
+        // Scenario Tests
+        function runScenarioTests() {
+            clearResults();
+            const section = createTestSection('🎯 Scenario Tests', 'scenarioTests');
+
+            const iframe = document.createElement('iframe');
+            iframe.src = './index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const win = iframe.contentWindow;
+
+                    // Test 1: Scenario Loading Function
+                    const hasLoadScenario = typeof win.loadScenario === 'function';
+                    addTestResult('scenarioTests', 'Load Scenario Function', 
+                        hasLoadScenario,
+                        `loadScenario function: ${hasLoadScenario}`);
+
+                    if (hasLoadScenario) {
+                        // Test 2: Conservative Scenario
+                        win.loadScenario('conservative');
+                        const appPrice = parseFloat(iframeDoc.getElementById('appPrice').value);
+                        const conservativeValid = appPrice === 7.99;
+                        
+                        addTestResult('scenarioTests', 'Conservative Scenario Loading', 
+                            conservativeValid,
+                            `App price set to: £${appPrice} (expected: £7.99)`);
+
+                        // Test 3: Realistic Scenario
+                        win.loadScenario('realistic');
+                        const appPriceRealistic = parseFloat(iframeDoc.getElementById('appPrice').value);
+                        const realisticValid = appPriceRealistic === 9.99;
+                        
+                        addTestResult('scenarioTests', 'Realistic Scenario Loading', 
+                            realisticValid,
+                            `App price set to: £${appPriceRealistic} (expected: £9.99)`);
+
+                        // Test 4: Optimistic Scenario
+                        win.loadScenario('optimistic');
+                        const appPriceOptimistic = parseFloat(iframeDoc.getElementById('appPrice').value);
+                        const optimisticValid = appPriceOptimistic === 12.99;
+                        
+                        addTestResult('scenarioTests', 'Optimistic Scenario Loading', 
+                            optimisticValid,
+                            `App price set to: £${appPriceOptimistic} (expected: £12.99)`);
+
+                        // Test 5: Save/Load Functionality
+                        const hasSaveScenario = typeof win.saveScenario === 'function';
+                        const hasDisplaySavedProjections = typeof win.displaySavedProjections === 'function';
+                        
+                        addTestResult('scenarioTests', 'Save/Load Functions', 
+                            hasSaveScenario && hasDisplaySavedProjections,
+                            `saveScenario: ${hasSaveScenario}, displaySavedProjections: ${hasDisplaySavedProjections}`);
+                    }
+
+                } catch (error) {
+                    addTestResult('scenarioTests', 'Scenario Test Execution', false, `Error: ${error.message}`);
+                }
+
+                document.body.removeChild(iframe);
+            }, 2000);
+        }
+
+        // Run all tests
+        function runAllTests() {
+            clearResults();
+            
+            console.log('🧪 Starting comprehensive test suite...');
+            
+            // Run tests with staggered delays to avoid conflicts
+            setTimeout(() => runCoreTests(), 100);
+            setTimeout(() => runUITests(), 3000);
+            setTimeout(() => runCalculationTests(), 6000);
+            setTimeout(() => runExportTests(), 10000);
+            setTimeout(() => runScenarioTests(), 13000);
+            
+            setTimeout(() => {
+                console.log('✅ All tests completed!');
+                
+                // Create final summary
+                const finalSection = createTestSection('📈 Test Summary', 'summaryTests');
+                const passRate = ((testStats.passed / testStats.total) * 100).toFixed(1);
+                
+                finalSection.innerHTML += `
+                    <div class="test-case">
+                        <h3>Overall Test Results</h3>
+                        <div class="test-details">
+                            <strong>Pass Rate: ${passRate}%</strong><br>
+                            Total Tests: ${testStats.total}<br>
+                            Passed: ${testStats.passed}<br>
+                            Failed: ${testStats.failed}<br>
+                            Warnings: ${testStats.warnings}<br><br>
+                            <strong>Status: ${testStats.failed === 0 ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED'}</strong>
+                        </div>
+                    </div>
+                `;
+            }, 16000);
+        }
+
+        // Initialize
+        updateStats();
+    </script>
+</body>
+</html>

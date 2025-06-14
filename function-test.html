@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Test - Live</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-result { margin: 8px 0; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+        .pass { background: #10b981; }
+        .fail { background: #ef4444; }
+        .warning { background: #f59e0b; }
+        .info { background: #3b82f6; }
+        button { margin: 5px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #5a67d8; }
+        iframe { width: 100%; height: 300px; border: 1px solid #333; margin: 10px 0; background: white; }
+        #testResults { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 NutriSnap Financial Forecast - Live Function Test</h1>
+    
+    <div style="margin: 20px 0;">
+        <button onclick="testInCurrentContext()">🔧 Test Functions Here</button>
+        <button onclick="testInMainApp()">🎯 Test Main App</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+    
+    <div id="testResults"></div>
+    
+    <h3>Main Application (for testing):</h3>
+    <iframe id="mainAppFrame" src="index.html"></iframe>
+
+    <script>
+        let testCount = 0;
+        
+        function log(message, type = 'info') {
+            testCount++;
+            const timestamp = new Date().toLocaleTimeString();
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${testCount}] [${timestamp}] ${message}`;
+            document.getElementById('testResults').appendChild(resultDiv);
+            document.getElementById('testResults').scrollTop = document.getElementById('testResults').scrollHeight;
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            testCount = 0;
+        }
+        
+        function testInCurrentContext() {
+            log('🚀 Starting tests in current context...', 'info');
+            
+            // Load scripts and test them
+            const scripts = [
+                'js/utils.js',
+                'js/validator.js', 
+                'js/core.js',
+                'js/ui.js',
+                'js/scenarios.js'
+            ];
+            
+            let loadedScripts = 0;
+            scripts.forEach((src, index) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    loadedScripts++;
+                    log(`✅ Loaded ${src}`, 'pass');
+                    
+                    if (loadedScripts === scripts.length) {
+                        setTimeout(() => testFunctions(), 100);
+                    }
+                };
+                script.onerror = () => {
+                    log(`❌ Failed to load ${src}`, 'fail');
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        function testFunctions() {
+            log('🔍 Testing individual functions...', 'info');
+            
+            // Test 1: Core utility functions
+            if (typeof window.formatCurrency === 'function') {
+                try {
+                    const result = window.formatCurrency(1234.56);
+                    log(`✅ formatCurrency(1234.56) = ${result}`, 'pass');
+                } catch (error) {
+                    log(`❌ formatCurrency error: ${error.message}`, 'fail');
+                }
+            } else {
+                log('❌ formatCurrency not available', 'fail');
+            }
+            
+            if (typeof window.formatNumber === 'function') {
+                try {
+                    const result = window.formatNumber(1234);
+                    log(`✅ formatNumber(1234) = ${result}`, 'pass');
+                } catch (error) {
+                    log(`❌ formatNumber error: ${error.message}`, 'fail');
+                }
+            } else {
+                log('❌ formatNumber not available', 'fail');
+            }
+            
+            // Test 2: Core calculation function
+            if (typeof window.calculateProjections === 'function') {
+                log('✅ calculateProjections function is available', 'pass');
+                
+                // Create minimal test form
+                createTestForm();
+                
+                setTimeout(() => {
+                    try {
+                        log('🔄 Attempting to run calculateProjections...', 'info');
+                        window.calculateProjections(true);
+                        log('✅ calculateProjections executed without immediate error', 'pass');
+                    } catch (error) {
+                        log(`❌ calculateProjections error: ${error.message}`, 'fail');
+                        console.error('Full error:', error);
+                    }
+                }, 200);
+                
+            } else {
+                log('❌ calculateProjections not available', 'fail');
+            }
+            
+            // Test 3: Save/load functions
+            if (typeof window.saveCurrentProjection === 'function') {
+                log('✅ saveCurrentProjection function is available', 'pass');
+            } else {
+                log('❌ saveCurrentProjection not available', 'fail');
+            }
+            
+            if (typeof window.loadProjection === 'function') {
+                log('✅ loadProjection function is available', 'pass');
+            } else {
+                log('❌ loadProjection not available', 'fail');
+            }
+        }
+        
+        function createTestForm() {
+            // Remove existing test form
+            const existing = document.getElementById('testForm');
+            if (existing) existing.remove();
+            
+            // Create comprehensive test form
+            const form = document.createElement('div');
+            form.id = 'testForm';
+            form.style.display = 'none';
+            form.innerHTML = `
+                <!-- Core inputs -->
+                <input type="number" id="appPrice" value="9.99">
+                <input type="number" id="startingMAU" value="1000">
+                <select id="projectionPeriod"><option value="36" selected>36</option></select>
+                
+                <!-- Growth and conversion -->
+                <input type="range" id="year1Growth" value="16" min="0" max="50">
+                <input type="range" id="year2Growth" value="12" min="0" max="50">
+                <input type="range" id="year3Growth" value="8" min="0" max="50">
+                <input type="range" id="initialConversion" value="2" min="0" max="10" step="0.1">
+                <input type="range" id="finalConversion" value="5" min="0" max="10" step="0.1">
+                <input type="range" id="freeChurnRate" value="20" min="0" max="50">
+                <input type="range" id="paidChurnRate" value="5" min="0" max="30">
+                <input type="range" id="churnImprovement" value="10" min="0" max="50">
+                <input type="range" id="annualDiscount" value="15" min="0" max="50">
+                
+                <!-- Costs -->
+                <input type="number" id="teamCostY1" value="4500">
+                <input type="number" id="teamCostY2" value="12000">
+                <input type="number" id="teamCostY3" value="25000">
+                <input type="number" id="techCostY1" value="800">
+                <input type="number" id="techCostY2" value="1800">
+                <input type="number" id="techCostY3" value="4000">
+                <input type="number" id="marketingCostY1" value="1200">
+                <input type="number" id="marketingCostY2" value="3500">
+                <input type="number" id="marketingCostY3" value="8000">
+                
+                <!-- Beta period (required by core.js) -->
+                <input type="number" id="betaUsersM0" value="0">
+                <input type="number" id="betaTeamCostM0" value="0">
+                <input type="number" id="betaTechCostM0" value="0">
+                <input type="number" id="betaMarketingCostM0" value="0">
+                <input type="number" id="betaUsersM1" value="0">
+                <input type="number" id="betaTeamCostM1" value="0">
+                <input type="number" id="betaTechCostM1" value="0">
+                <input type="number" id="betaMarketingCostM1" value="0">
+                <input type="number" id="betaUsersM2" value="0">
+                <input type="number" id="betaTeamCostM2" value="0">
+                <input type="number" id="betaTechCostM2" value="0">
+                <input type="number" id="betaMarketingCostM2" value="0">
+                
+                <!-- Investment -->
+                <input type="number" id="seedInvestment" value="250000">
+                <input type="number" id="equityOffered" value="12">
+                <input type="number" id="valuationMultiple" value="5">
+                
+                <!-- B2B -->
+                <input type="number" id="b2bStartMonth" value="12">
+                <input type="range" id="b2bPercentage" value="25" min="0" max="100">
+                
+                <!-- Advanced features toggles -->
+                <input type="checkbox" id="enableTieredPricing">
+                <input type="checkbox" id="enableVariableCosts">
+                <input type="checkbox" id="enableAdvertisingRevenue">
+                
+                <!-- Advertising inputs -->
+                <input type="number" id="adRevenueStartMonth" value="6">
+                <input type="range" id="adRevenueGrowth" value="10" min="0" max="50">
+                <input type="checkbox" id="enableBannerAds">
+                <input type="number" id="bannerECPM" value="2.50" step="0.01">
+                <input type="number" id="bannerImpressions" value="20">
+                <input type="checkbox" id="enableInterstitialAds">
+                <input type="number" id="interstitialECPM" value="8.00" step="0.01">
+                <input type="number" id="interstitialImpressions" value="4">
+                <input type="checkbox" id="enableRewardedAds">
+                <input type="number" id="rewardedECPM" value="25.00" step="0.01">
+                <input type="number" id="rewardedImpressions" value="2">
+                
+                <!-- Output elements -->
+                <div id="outputSection" style="display: none;">
+                    <div id="finalMAU">0</div>
+                    <div id="finalARR">£0</div>
+                    <div id="breakEvenMonth">Not reached</div>
+                    <div id="totalRevenue">£0</div>
+                    <div id="totalCosts">£0</div>
+                    <div id="netProfit">£0</div>
+                    <table><tbody id="monthlyTableBody"></tbody></table>
+                </div>
+                
+                <!-- Status and save elements -->
+                <div id="calculationStatus">Ready</div>
+                <input type="text" id="saveProjectionName" placeholder="Test Projection">
+                <div id="savedScenarios"></div>
+            `;
+            
+            document.body.appendChild(form);
+            log('✅ Created comprehensive test form with all required elements', 'pass');
+        }
+        
+        function testInMainApp() {
+            log('🎯 Testing main application in iframe...', 'info');
+            
+            const iframe = document.getElementById('mainAppFrame');
+            
+            setTimeout(() => {
+                try {
+                    const iframeWindow = iframe.contentWindow;
+                    const iframeDoc = iframe.contentDocument;
+                    
+                    // Test if app loaded
+                    if (!iframeDoc) {
+                        log('❌ Cannot access iframe document (CORS or loading issue)', 'fail');
+                        return;
+                    }
+                    
+                    log('✅ Main app iframe accessible', 'pass');
+                    
+                    // Test key elements
+                    const appPrice = iframeDoc.getElementById('appPrice');
+                    const calcBtn = iframeDoc.getElementById('calculateBtn');
+                    
+                    if (appPrice) {
+                        log(`✅ Found appPrice element in main app: ${appPrice.value}`, 'pass');
+                    } else {
+                        log('❌ appPrice element not found in main app', 'fail');
+                    }
+                    
+                    if (calcBtn) {
+                        log('✅ Found calculate button in main app', 'pass');
+                        
+                        // Test if we can access the function
+                        if (typeof iframeWindow.calculateProjections === 'function') {
+                            log('✅ calculateProjections function available in main app', 'pass');
+                            
+                            // Try to run it
+                            try {
+                                log('🔄 Attempting calculation in main app...', 'info');
+                                iframeWindow.calculateProjections(true);
+                                log('✅ Calculation executed in main app', 'pass');
+                                
+                                // Check results after delay
+                                setTimeout(() => {
+                                    const outputSection = iframeDoc.getElementById('outputSection');
+                                    const finalMAU = iframeDoc.getElementById('finalMAU');
+                                    
+                                    if (outputSection && outputSection.style.display !== 'none') {
+                                        log('✅ Output section became visible', 'pass');
+                                    } else {
+                                        log('⚠️ Output section not visible after calculation', 'warning');
+                                    }
+                                    
+                                    if (finalMAU && finalMAU.textContent && finalMAU.textContent !== '0') {
+                                        log(`✅ Final MAU populated: ${finalMAU.textContent}`, 'pass');
+                                    } else {
+                                        log('⚠️ Final MAU not populated', 'warning');
+                                    }
+                                }, 3000);
+                                
+                            } catch (error) {
+                                log(`❌ Error running calculation in main app: ${error.message}`, 'fail');
+                            }
+                        } else {
+                            log('❌ calculateProjections function not available in main app', 'fail');
+                        }
+                    } else {
+                        log('❌ Calculate button not found in main app', 'fail');
+                    }
+                    
+                } catch (error) {
+                    log(`❌ Error testing main app: ${error.message}`, 'fail');
+                }
+            }, 2000); // Wait for iframe to load
+        }
+        
+        // Start by testing the iframe
+        window.addEventListener('load', () => {
+            log('🎯 Test page loaded. Use buttons above to run tests.', 'info');
+        });
+    </script>
+</body>
+</html>

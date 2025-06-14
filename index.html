@@ -62,6 +62,14 @@
             font-weight: 500 !important;
             text-align: right !important;
         }
+
+        .break-even-row {
+            background-color: rgba(74, 222, 128, 0.15) !important;
+            font-weight: bold;
+        }
+        .break-even-row td {
+            color: #a7f3d0 !important;
+        }
     </style>
 </head>
 <body>
@@ -78,37 +86,16 @@
                     <h2 class="card-title">📱 Core App Parameters</h2>
                     <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div class="input-group">
-                            <label>Monthly Price (£)
-                                <span class="info-icon">?</span>
-                                <span class="tooltip">The monthly subscription price for your premium tier users.</span>
-                            </label>
-                            <input type="number" id="appPrice" value="9.99" min="1" max="50" step="0.01">
-                        </div>
-                        
-                        <div class="input-group">
-                            <label for="annualDiscount">Annual Discount (%) <span class="help-icon" title="Discount offered for annual subscriptions to encourage longer commitments.">?</span></label>
-                            <input type="range" id="annualDiscount" value="20" min="0" max="200" step="5" oninput="updateSliderValue(this); updateAnnualPrice()">
-                            <span id="annualDiscountValue">20%</span>
-                        </div>
-                        
-                        <div class="input-group">
-                            <label for="annualPlanPercentage">Annual Plan Adoption (%) <span class="help-icon" title="Percentage of users who choose annual over monthly billing.">?</span></label>
-                            <input type="range" id="annualPlanPercentage" value="30" min="0" max="200" step="5" oninput="updateSliderValue(this); updateAnnualPrice()">
-                            <span id="annualPlanPercentageValue">30%</span>
-                        </div>
-                        
-                        <div class="input-group">
                             <label>Starting MAU
                                 <span class="info-icon">?</span>
                                 <span class="tooltip">Monthly Active Users at launch (Month 1). Include both free and potential paid users.</span>
                             </label>
                             <input type="number" id="startingMAU" value="1000" min="50" max="10000" step="50">
                         </div>
-                        
                         <div class="input-group">
                             <label>Projection Period
                                 <span class="info-icon">?</span>
-                                <span class="tooltip">Select your forecast timeframe. Recommended: 2-3 years for SaaS.</span>
+                                <span class="tooltip">Select your forecast timeframe. Recommended: 2-3 years for SaaS startups. Longer periods are less accurate but useful for fundraising projections.</span>
                             </label>
                             <select id="projectionPeriod" onchange="updateProjectionPeriod()">
                                 <option value="12">1 Year (12 months)</option>
@@ -118,11 +105,6 @@
                                 <option value="48">4 Years (48 months)</option>
                                 <option value="60">5 Years (60 months)</option>
                             </select>
-                        </div>
-                        
-                        <div class="annual-price-display" id="annualPriceDisplay">
-                            <strong>Effective Annual Price: £95.93</strong>
-                            <small>Blended rate considering discount adoption</small>
                         </div>
                     </div>
                 </div>
@@ -212,20 +194,29 @@
                 <div class="card">
                     <h2 class="card-title">📈 Growth Parameters</h2>
                     <div class="input-group">
-                        <label for="year1Growth">Year 1 Monthly Growth (%) <span class="help-icon" title="Monthly user growth rate for months 1-12. UK health apps typically see 10-20% early growth.">?</span></label>
-                        <input type="range" id="year1Growth" value="16" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                        <label for="year1Growth">Year 1 Monthly Growth (%)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Monthly user growth rate for months 1-12. UK health apps typically see 10-20% early growth.</span>
+                        </label>
+                        <input type="range" id="year1Growth" value="32" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                         <span id="year1GrowthValue">16%</span>
                     </div>
                     
                     <div class="input-group">
-                        <label for="year2Growth">Year 2 Monthly Growth (%) <span class="help-icon" title="Monthly user growth rate for months 13-24 as growth naturally slows.">?</span></label>
-                        <input type="range" id="year2Growth" value="12" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                        <label for="year2Growth">Year 2 Monthly Growth (%)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Monthly user growth rate for months 13-24 as growth naturally slows.</span>
+                        </label>
+                        <input type="range" id="year2Growth" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                         <span id="year2GrowthValue">12%</span>
                     </div>
                     
                     <div class="input-group">
-                        <label for="year3Growth">Year 3+ Monthly Growth (%) <span class="help-icon" title="Sustainable long-term growth rate for mature app phase.">?</span></label>
-                        <input type="range" id="year3Growth" value="8" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                        <label for="year3Growth">Year 3+ Monthly Growth (%)
+                            <span class="info-icon">?</span>
+                            <span class="tooltip">Sustainable long-term growth rate for mature app phase.</span>
+                        </label>
+                        <input type="range" id="year3Growth" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                         <span id="year3GrowthValue">8%</span>
                     </div>
                 </div>
@@ -235,32 +226,47 @@
                     <h2 class="card-title">🎯 Conversion & Churn Parameters</h2>
                     <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: 20px;">
                         <div class="input-group">
-                            <label for="initialConversion">Initial Conversion Rate (%) <span class="help-icon" title="Monthly conversion rate from free to paid users (start conservative).">?</span></label>
-                            <input type="range" id="initialConversion" value="2.5" min="0" max="200" step="0.1" oninput="updateSliderValue(this)">
-                            <span id="initialConversionValue">2.5%</span>
+                            <label for="initialConversion">Initial Conversion Rate (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Monthly conversion rate from free to paid users at the beginning of the projection.</span>
+                            </label>
+                            <input type="range" id="initialConversion" value="15" min="0" max="100" step="1" oninput="updateSliderValue(this)">
+                            <span id="initialConversionValue">1.5%</span>
                         </div>
                         
                         <div class="input-group">
-                            <label for="conversionGrowth">Annual Conversion Growth (%) <span class="help-icon" title="How much conversion rate improves each year due to product improvements.">?</span></label>
-                            <input type="range" id="conversionGrowth" value="15" min="0" max="200" step="1" oninput="updateSliderValue(this)">
-                            <span id="conversionGrowthValue">15%</span>
+                            <label for="finalConversion">Final Conversion Rate (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">The target conversion rate at the end of the projection period. The model will ramp up to this value over time.</span>
+                            </label>
+                            <input type="range" id="finalConversion" value="33" min="0" max="100" step="1" oninput="updateSliderValue(this)">
+                            <span id="finalConversionValue">5%</span>
                         </div>
                         
                         <div class="input-group">
-                            <label for="freeChurnRate">Free User Churn Rate (%) <span class="help-icon" title="Monthly churn rate for free users. Health apps typically see 15-25%.">?</span></label>
-                            <input type="range" id="freeChurnRate" value="20" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                            <label for="freeChurnRate">Free User Churn Rate (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Monthly churn rate for free users. Health apps typically see 15-25%.</span>
+                            </label>
+                            <input type="range" id="freeChurnRate" value="50" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="freeChurnRateValue">20%</span>
                         </div>
                         
                         <div class="input-group">
-                            <label for="paidChurnRate">Paid User Churn Rate (%) <span class="help-icon" title="Monthly churn rate for paying customers. Premium health apps typically see 3-8%.">?</span></label>
-                            <input type="range" id="paidChurnRate" value="5" min="0" max="200" step="0.5" oninput="updateSliderValue(this)">
+                            <label for="paidChurnRate">Paid User Churn Rate (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Monthly churn rate for paying customers. Premium health apps typically see 3-8%.</span>
+                            </label>
+                            <input type="range" id="paidChurnRate" value="25" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="paidChurnRateValue">5%</span>
                         </div>
                         
                         <div class="input-group">
-                            <label for="churnImprovement">Churn Improvement Factor (%) <span class="help-icon" title="How much churn reduces each year as product improves (10% = 10% improvement per year).">?</span></label>
-                            <input type="range" id="churnImprovement" value="10" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                            <label for="churnImprovement">Churn Improvement Factor (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">How much churn reduces each year as product improves (10% = 10% improvement per year).</span>
+                            </label>
+                            <input type="range" id="churnImprovement" value="33" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="churnImprovementValue">10%</span>
                         </div>
                         
@@ -273,9 +279,159 @@
                         </div>
                         
                         <div class="input-group">
-                            <label for="b2bPercentage">B2B Revenue Boost (%) <span class="help-icon" title="Additional revenue from B2B partnerships as % of consumer revenue.">?</span></label>
-                            <input type="range" id="b2bPercentage" value="15" min="0" max="200" step="5" oninput="updateSliderValue(this)">
+                            <label for="b2bPercentage">B2B Revenue Boost (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Additional revenue from B2B partnerships as % of consumer revenue.</span>
+                            </label>
+                            <input type="range" id="b2bPercentage" value="30" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="b2bPercentageValue">15%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advertising Revenue Parameters -->
+                <div class="card">
+                    <h2 class="card-title">📺 Advertising Revenue</h2>
+                    <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div class="input-group">
+                            <label for="enableAdvertisingRevenue" style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="enableAdvertisingRevenue" checked onchange="toggleAdvertisingRevenue()">
+                                Enable Advertising Revenue
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Generate revenue from ads shown to free users. Typically 5-15% of total revenue for freemium apps.</span>
+                            </label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Ad Revenue Start Month
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">When you'll start showing ads to free users (typically after product-market fit).</span>
+                            </label>
+                            <input type="number" id="adRevenueStartMonth" value="6" min="1" max="24" step="1">
+                        </div>
+                    </div>
+                    
+                    <div id="advertisingRevenueSection">
+                        <!-- Individual Ad Type Controls -->
+                        <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                            <!-- Banner Ads -->
+                            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; border-top: 3px solid #ef4444;">
+                                <h4 style="color: #ef4444; margin: 0 0 15px 0; font-size: 1rem;">🟥 Banner Ads</h4>
+                                <div class="input-group">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                                        <input type="checkbox" id="enableBannerAds" checked onchange="updateAdRevenueCalculation()">
+                                        Enable Banner Ads
+                                    </label>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">eCPM (£1-3 range)
+                                        <span class="info-icon">?</span>
+                                        <span class="tooltip">Small ads at top/bottom of screen. Least intrusive, lowest revenue.</span>
+                                    </label>
+                                    <input type="range" id="bannerECPM" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="bannerECPMValue">£2.00</span>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">Impressions/User/Month</label>
+                                    <input type="range" id="bannerImpressions" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="bannerImpressionsValue">20</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Interstitial Ads -->
+                            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; border-top: 3px solid #f59e0b;">
+                                <h4 style="color: #f59e0b; margin: 0 0 15px 0; font-size: 1rem;">🟨 Interstitial Ads</h4>
+                                <div class="input-group">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                                        <input type="checkbox" id="enableInterstitialAds" onchange="updateAdRevenueCalculation()">
+                                        Enable Interstitial Ads
+                                    </label>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">eCPM (£5-15 range)
+                                        <span class="info-icon">?</span>
+                                        <span class="tooltip">Full-screen ads between activities. Higher impact and revenue.</span>
+                                    </label>
+                                    <input type="range" id="interstitialECPM" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="interstitialECPMValue">£8.00</span>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">Impressions/User/Month</label>
+                                    <input type="range" id="interstitialImpressions" value="33" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="interstitialImpressionsValue">5</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Rewarded Video Ads -->
+                            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; border-top: 3px solid #10b981;">
+                                <h4 style="color: #10b981; margin: 0 0 15px 0; font-size: 1rem;">🟩 Rewarded Video</h4>
+                                <div class="input-group">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                                        <input type="checkbox" id="enableRewardedAds" onchange="updateAdRevenueCalculation()">
+                                        Enable Rewarded Video
+                                    </label>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">eCPM (£10-40 range)
+                                        <span class="info-icon">?</span>
+                                        <span class="tooltip">User chooses to watch for rewards. Highest eCPM but lower frequency.</span>
+                                    </label>
+                                    <input type="range" id="rewardedECPM" value="50" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="rewardedECPMValue">£25.00</span>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.9rem;">Impressions/User/Month</label>
+                                    <input type="range" id="rewardedImpressions" value="20" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                    <span id="rewardedImpressionsValue">2</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- General Ad Settings -->
+                        <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 20px;">
+                            <div class="input-group">
+                                <label for="adRevenueGrowth">Annual eCPM Growth (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">How much all eCPMs improve yearly through optimization and better ad placements.</span>
+                                </label>
+                                <input type="range" id="adRevenueGrowth" value="20" min="0" max="100" step="1" oninput="updateSliderValue(this); updateAdRevenueCalculation()">
+                                <span id="adRevenueGrowthValue">10%</span>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label>Quick Presets
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Apply industry-standard combinations for different strategies.</span>
+                                </label>
+                                <select id="adPreset" onchange="applyAdPreset()">
+                                    <option value="">Custom Settings</option>
+                                    <option value="conservative">Conservative (Banner only)</option>
+                                    <option value="balanced">Balanced (Banner + Interstitial)</option>
+                                    <option value="aggressive">Aggressive (All types)</option>
+                                    <option value="premium">Premium (Interstitial + Rewarded)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #10b981;">
+                            <h4 style="color: #10b981; margin: 0 0 10px 0;">📊 Ad Revenue Benchmark Guide</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 0.9rem;">
+                                <div>
+                                    <strong style="color: #ef4444;">Banner Ads</strong><br>
+                                    <span style="color: #999;">eCPM: £1.00 - £3.00</span><br>
+                                    <small style="color: #666;">Least intrusive, lowest revenue</small>
+                                </div>
+                                <div>
+                                    <strong style="color: #f59e0b;">Interstitial Ads</strong><br>
+                                    <span style="color: #999;">eCPM: £5.00 - £15.00</span><br>
+                                    <small style="color: #666;">Full-screen, higher impact</small>
+                                </div>
+                                <div>
+                                    <strong style="color: #10b981;">Rewarded Video</strong><br>
+                                    <span style="color: #999;">eCPM: £10.00 - £40.00</span><br>
+                                    <small style="color: #666;">User-initiated, highest revenue</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -287,20 +443,26 @@
                         <div class="input-group">
                             <label>Seed Investment (£)
                                 <span class="info-icon">?</span>
-                                <span class="tooltip">Initial funding to cover runway until break-even or next round.</span>
+                                <span class="tooltip">Initial funding to cover runway until break-even or next round. Typical UK seed rounds: £150K-£500K.</span>
                             </label>
                             <input type="number" id="seedInvestment" value="150000" min="10000" max="2000000" step="10000">
                         </div>
                         
                         <div class="input-group">
-                            <label for="equityOffered">Equity Given Away (%) <span class="help-icon" title="Percentage of company equity offered to investors.">?</span></label>
-                            <input type="range" id="equityOffered" value="20" min="0" max="200" step="1" oninput="updateSliderValue(this)">
+                            <label for="equityOffered">Equity Given Away (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Percentage of company equity offered to investors.</span>
+                            </label>
+                            <input type="range" id="equityOffered" value="50" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="equityOfferedValue">20%</span>
                         </div>
                         
                         <div class="input-group">
-                            <label for="valuationMultiple">Exit Valuation Multiple <span class="help-icon" title="Revenue multiple for exit valuation. SaaS typically 5-15x ARR.">?</span></label>
-                            <input type="range" id="valuationMultiple" value="8" min="0" max="200" step="0.5" oninput="updateSliderValue(this)">
+                            <label for="valuationMultiple">Exit Valuation Multiple
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Revenue multiple for exit valuation. SaaS typically 5-15x ARR.</span>
+                            </label>
+                            <input type="range" id="valuationMultiple" value="40" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="valuationMultipleValue">8</span>
                         </div>
                     </div>
@@ -316,21 +478,21 @@
                             <div class="input-group">
                                 <label style="font-size: 0.9rem;">Year 1 (£/month)
                                     <span class="info-icon">?</span>
-                                    <span class="tooltip">Monthly salaries, benefits, etc. Start small with founders + 1-2 key hires.</span>
+                                    <span class="tooltip">Monthly salaries, benefits, etc. Start small with founders + 1-2 key hires. UK average: £3K-£6K/month.</span>
                                 </label>
                                 <input type="number" id="teamCostY1" value="4500" min="1000" max="50000" step="500" style="padding: 8px;">
                             </div>
                             <div class="input-group">
                                 <label style="font-size: 0.9rem;">Year 2 (£/month)
                                     <span class="info-icon">?</span>
-                                    <span class="tooltip">Growing team as you scale. Add developers, designer, marketer.</span>
+                                    <span class="tooltip">Growing team as you scale. Add developers, designer, marketer. Typical scale: £10K-£15K/month.</span>
                                 </label>
                                 <input type="number" id="teamCostY2" value="12000" min="2000" max="100000" step="1000" style="padding: 8px;">
                             </div>
                             <div class="input-group">
                                 <label style="font-size: 0.9rem;">Year 3+ (£/month)
                                     <span class="info-icon">?</span>
-                                    <span class="tooltip">Mature team size for scale operations.</span>
+                                    <span class="tooltip">Mature team size for scale operations. Full team: £20K-£40K/month for Series A stage.</span>
                                 </label>
                                 <input type="number" id="teamCostY3" value="25000" min="5000" max="200000" step="2500" style="padding: 8px;">
                             </div>
@@ -348,7 +510,7 @@
                             <div class="input-group">
                                 <label style="font-size: 0.9rem;">Year 1 (£/month)
                                     <span class="info-icon">?</span>
-                                    <span class="tooltip">Servers, tools, licenses, APIs. Start lean but scalable.</span>
+                                    <span class="tooltip">Servers, tools, licenses, APIs. Start lean but scalable. AWS/GCP: £500-£1500/month typical.</span>
                                 </label>
                                 <input type="number" id="techCostY1" value="800" min="100" max="10000" step="100" style="padding: 8px;">
                             </div>
@@ -451,84 +613,80 @@
                 <div class="card">
                     <h2 class="card-title">💎 Advanced Features</h2>
                     
-                    <div class="feature-toggle">
-                        <label for="enableTieredPricing">
-                            <input type="checkbox" id="enableTieredPricing" onchange="toggleTieredPricing()">
-                            <strong>Enable Tiered Pricing</strong>
-                            <p>Model freemium with four tiers: Free (Calorie Tracker), Premium (Journal Access), Pro (Glucose Prediction), and Max (CGM Integration).</p>
-                        </label>
-                    </div>
-                    
-                    <!-- Tiered Pricing Configuration Section -->
-                    <div id="tieredPricingSection" style="display: none; margin-top: 15px; background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                    <!-- Tiered Pricing Configuration Section - Now always visible -->
+                    <div id="tieredPricingSection" style="margin-top: 15px; background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
                         <h4 style="color: #8b5cf6; margin: 0 0 15px 0;">Tier Configuration</h4>
                         
-                        <!-- Tier 1: Free -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #0f0f0f; border-radius: 6px;">
-                            <label style="display: block; font-weight: bold; color: #4ade80; margin-bottom: 8px;">Tier 1 (Free)</label>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 8px; align-items: center;">
-                                <input type="text" value="Free" disabled style="background: #2a2a2a; color: #ccc; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <input type="number" value="0" disabled style="background: #2a2a2a; color: #ccc; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <div class="tier-setting">
-                                    <label>Free to Premium (%)</label>
-                                    <input type="range" id="tier1Conversion" min="0" max="200" value="70" style="width: 100%;">
-                                    <span>70%</span>
-                                </div>
+                        <!-- Annual Discount Configuration -->
+                        <div style="background: #0f0f0f; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333;">
+                            <h5 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 0.95rem;">💰 Annual Subscription Discount</h5>
+                            <div class="input-group">
+                                <label for="annualDiscount">Annual Discount Percentage (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Discount percentage offered for annual subscriptions vs monthly. Typical range: 10-20%. Applied to all tier prices when users choose annual billing.</span>
+                                </label>
+                                <input type="range" id="annualDiscount" value="33" min="0" max="100" step="1" oninput="updateSliderValue(this)">
+                                <span id="annualDiscountValue">16.5%</span>
                             </div>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #999;">Features: Calorie tracking, basic food logging</p>
+                            <div style="margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px;">
+                                <small style="color: #9ca3af;">
+                                    💡 <strong>Industry Standards:</strong> SaaS apps typically offer 10-20% annual discounts. 
+                                    Higher discounts improve cash flow but reduce per-month revenue recognition.
+                                </small>
+                            </div>
                         </div>
                         
-                        <!-- Tier 2: Premium -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #0f0f0f; border-radius: 6px;">
-                            <label style="display: block; font-weight: bold; color: #667eea; margin-bottom: 8px;">Tier 2 (Premium)</label>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 8px; align-items: center;">
-                                <input type="text" value="Premium" disabled style="background: #2a2a2a; color: #ccc; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <input type="number" id="basicPrice" value="4.99" min="0" step="0.01" style="background: #1a1a1a; color: #fff; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <div class="tier-setting">
-                                    <label>Basic Tier (%)</label>
-                                    <input type="range" id="basicConversion" min="0" max="200" value="20" style="width: 100%;" oninput="updateSliderValue(this)">
-                                    <span id="basicConversionValue">20%</span>
-                                </div>
-                            </div>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #999;">Features: Journal access, meal planning, basic insights</p>
+                        <!-- Container for dynamically added tiers -->
+                        <div id="dynamicTierContainer">
+                            <!-- Tiers will be added here by JavaScript -->
                         </div>
-                        
-                        <!-- Tier 3: Pro -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #0f0f0f; border-radius: 6px;">
-                            <label style="display: block; font-weight: bold; color: #f59e0b; margin-bottom: 8px;">Tier 3 (Pro)</label>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 8px; align-items: center;">
-                                <input type="text" value="Pro" disabled style="background: #2a2a2a; color: #ccc; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <input type="number" id="proPrice" value="9.99" min="0" step="0.01" style="background: #1a1a1a; color: #fff; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <div class="tier-setting">
-                                    <label>Pro Tier (%)</label>
-                                    <input type="range" id="proConversion" min="0" max="200" value="8" style="width: 100%;" oninput="updateSliderValue(this)">
-                                    <span id="proConversionValue">8%</span>
-                                </div>
-                            </div>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #999;">Features: Glucose prediction, advanced journal, AI insights</p>
-                        </div>
-                        
-                        <!-- Tier 4: Max -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #0f0f0f; border-radius: 6px;">
-                            <label style="display: block; font-weight: bold; color: #ef4444; margin-bottom: 8px;">Tier 4 (Max)</label>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 8px; align-items: center;">
-                                <input type="text" value="Max" disabled style="background: #2a2a2a; color: #ccc; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <input type="number" id="enterprisePrice" value="19.99" min="0" step="0.01" style="background: #1a1a1a; color: #fff; padding: 6px; border: 1px solid #444; border-radius: 4px;">
-                                <div class="tier-setting">
-                                    <label>Enterprise Tier (%)</label>
-                                    <input type="range" id="enterpriseConversion" min="0" max="200" value="2" style="width: 100%;" oninput="updateSliderValue(this)">
-                                    <span id="enterpriseConversionValue">2%</span>
-                                </div>
-                            </div>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #999;">Features: CGM integration, real-time glucose monitoring, premium support</p>
+
+                        <!-- Add Tier Button -->
+                        <div style="margin-top: 15px;">
+                            <button id="addTierBtn" class="secondary-btn" style="width: 100%; text-align: center; background: #374151; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">
+                                + Add Premium Tier
+                            </button>
                         </div>
                     </div>
                     <div class="feature-toggle">
                         <label for="enableCohortTracking">
-                            <input type="checkbox" id="enableCohortTracking" onchange="toggleCohortTracking()">
+                            <input type="checkbox" id="enableCohortTracking" onchange="toggleAdvancedSection('cohortTrackingSection', 'enableCohortTracking')">
                             <strong>Enable Cohort Tracking</strong>
                             <p>Track user retention and revenue by signup month to analyze cohort performance.</p>
                         </label>
+                    </div>
+                    <!-- Cohort Tracking Settings Section -->
+                    <div id="cohortTrackingSection" class="card" style="display: none; margin-top: 15px; background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                        <h4 style="color: #8b5cf6; margin: 0 0 15px 0;">Cohort Tracking Settings</h4>
+                        <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <div class="input-group">
+                                <label for="initialRetentionRate">Initial Retention Rate (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Percentage of users retained after the first month.</span>
+                                </label>
+                                <div class="slider-container">
+                                    <input type="range" id="initialRetentionRate" min="0" max="100" value="70" step="1" class="slider" oninput="updateSliderValue(this)">
+                                    <span id="initialRetentionRateValue" class="slider-value">70%</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="retentionDecay">Monthly Retention Decay (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Monthly decrease in retention rate (lower = slower decay).</span>
+                                </label>
+                                <div class="slider-container">
+                                    <input type="range" id="retentionDecay" min="0" max="100" value="25" step="1" class="slider" oninput="updateSliderValue(this)">
+                                    <span id="retentionDecayValue" class="slider-value">25%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="cohortAnalysisPeriod">Analysis Period (months)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Number of months to track each cohort.</span>
+                            </label>
+                            <input type="number" id="cohortAnalysisPeriod" min="3" max="36" value="12">
+                        </div>
                     </div>
                     <div class="feature-toggle">
                         <label for="enableVariableCosts">
@@ -563,8 +721,11 @@
                             <input type="number" id="infraCostPerUser" value="0.08" min="0" max="2" step="0.01">
                         </div>
                         <div class="input-group">
-                            <label for="transactionFees">Transaction Fees (%) <span class="help-icon" title="Processing fees for payments (Stripe ~2.9%, PayPal ~3.5%, Apple/Google ~30%).">?</span></label>
-                            <input type="range" id="transactionFees" value="4.5" min="0" max="200" step="0.5" oninput="updateSliderValue(this)">
+                            <label for="transactionFees">Transaction Fees (%)
+                                <span class="info-icon">?</span>
+                                <span class="tooltip">Processing fees for payments (Stripe ~2.9%, PayPal ~3.5%, Apple/Google ~30%).</span>
+                            </label>
+                            <input type="range" id="transactionFees" value="45" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                             <span id="transactionFeesValue">4.5%</span>
                         </div>
                         
@@ -655,7 +816,8 @@
         <div class="card generate-card">
             <h3 class="generate-title">🚀 Generate Your Financial Projections</h3>
             <p class="generate-subtitle">✅ Enter all your parameters, then click below to calculate.</p>
-            <button id="calculateBtn" class="cta-button" onclick="calculateProjections(true)">🚀 Calculate Projections</button>
+            <button id="calculateBtn" class="cta-button">🚀 Calculate Projections</button>
+            <div id="validationResults" style="margin-top: 15px;"></div>
             <p id="calculationStatus" class="status-message"></p>
         </div>
 
@@ -789,6 +951,45 @@
                     </div>
                 </div>
 
+                <!-- Advertising Revenue Breakdown Card -->
+                <div class="metric-box" id="advertisingRevenueBreakdownCard" style="display: none;">
+                    <h4 class="metric-box-title">📺 Advertising Revenue Breakdown</h4>
+                    <div class="metric-box-content">
+                        <div class="metric-item">
+                            <span class="metric-label">Total Ad Revenue:</span>
+                            <span class="metric-value" id="totalAdvertisingRevenueDisplay">-</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">% of Total Revenue:</span>
+                            <span class="metric-value" id="adRevenuePercentageDisplay">-</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">🟥 Banner Revenue:</span>
+                            <span class="metric-value"><span id="bannerRevenueDisplay">-</span> (<span id="bannerRevenuePercentage">-</span>)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">🟨 Interstitial Revenue:</span>
+                            <span class="metric-value"><span id="interstitialRevenueDisplay">-</span> (<span id="interstitialRevenuePercentage">-</span>)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">🟩 Rewarded Revenue:</span>
+                            <span class="metric-value"><span id="rewardedRevenueDisplay">-</span> (<span id="rewardedRevenuePercentage">-</span>)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Effective eCPM:</span>
+                            <span class="metric-value" id="effectiveECPMDisplay">-</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Free Users:</span>
+                            <span class="metric-value" id="avgFreeUsersWithAdsDisplay">-</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Started Month:</span>
+                            <span class="metric-value" id="adRevenueStartMonthDisplay">-</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Conversion Rate Breakdown Card -->
                 <div class="metric-box">
                     <h4 class="metric-box-title">🎯 Conversion Rates</h4>
@@ -804,10 +1005,6 @@
                         <div class="metric-item">
                             <span class="metric-label">Average Rate:</span>
                             <span class="metric-value" id="avgConversionDisplay">-</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Annual Growth:</span>
-                            <span class="metric-value" id="conversionImprovementDisplay">-</span>
                         </div>
                         <div class="metric-item">
                             <span class="metric-label">Peak Rate:</span>
@@ -908,6 +1105,14 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Revenue Composition Chart Card -->
+                <div class="metric-box" id="revenueCompositionCard" style="display: none;">
+                    <h4 class="metric-box-title">📊 Revenue Composition</h4>
+                    <div class="metric-box-content" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="revenueCompositionChart" style="max-height: 180px;"></canvas>
+                    </div>
+                </div>
             </div>
 
             <!-- Monthly Projections Table -->
@@ -916,17 +1121,18 @@
                 <div class="table-container">
                     <table id="monthlyTable" class="projection-table">
                         <thead>
-                            <tr>
+                            <tr id="monthlyTableHeader">
                                 <th>Month</th>
                                 <th>MAU</th>
                                 <th>Growth Rate (%)</th>
                                 <th>Free Users</th>
-                                <th style="display: none;">Basic Users</th>
-                                <th style="display: none;">Pro Users</th>
-                                <th style="display: none;" id="enterpriseHeader">Enterprise Users</th>
+                                <th id="tier1Header" style="display: none;">Basic Users</th>
+                                <th id="tier2Header" style="display: none;">Pro Users</th>
+                                <th id="tier3Header" style="display: none;">Enterprise Users</th>
                                 <th>Premium Users</th>
                                 <th>Conversion Rate</th>
                                 <th>Monthly Revenue</th>
+                                <th style="display: none;" id="advertisingRevenueHeader">Ad Revenue</th>
                                 <th>ARR</th>
                                 <th>Team Cost</th>
                                 <th>Tech Cost</th>
@@ -943,10 +1149,74 @@
                 </div>
             </div>
 
-            <!-- Chart Container -->
+            <!-- Interactive Charts Section -->
             <div class="card">
-                <h3 class="card-title">📊 Financial Chart</h3>
-                <div class="chart-container">
+                <h3 class="card-title">📊 Interactive Financial Charts</h3>
+                
+                <!-- Chart Navigation -->
+                <div class="chart-navigation" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="chart-nav-btn active" onclick="showChart('revenue-waterfall')" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        💰 Revenue Growth
+                    </button>
+                    <button class="chart-nav-btn" onclick="showChart('acquisition-funnel')" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        📈 Growth Metrics
+                    </button>
+                    <button class="chart-nav-btn" onclick="showChart('cash-runway')" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        🏃 Cash Runway
+                    </button>
+                    <button class="chart-nav-btn" onclick="showChart('unit-economics')" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        📈 Unit Economics
+                    </button>
+                    <button class="chart-nav-btn" onclick="showChart('main-overview')" style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        📊 Overview
+                    </button>
+                    <button class="chart-nav-btn" onclick="enterPresentationMode()" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: auto;">
+                        🎥 Present Mode
+                    </button>
+                </div>
+                
+                <!-- Revenue Waterfall Chart -->
+                <div id="revenue-waterfall-container" class="chart-container" style="display: block;">
+                    <h4 style="color: #10b981; margin-bottom: 15px;">💰 Revenue Growth Waterfall</h4>
+                    <p style="color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem;">
+                        Shows how revenue builds month-over-month. Hover over bars to see detailed breakdowns of growth drivers.
+                    </p>
+                    <canvas id="revenueWaterfallChart"></canvas>
+                </div>
+                
+                <!-- Growth Metrics Dashboard -->
+                <div id="acquisition-funnel-container" class="chart-container" style="display: none;">
+                    <h4 style="color: #f59e0b; margin-bottom: 15px;">📈 Growth Metrics Dashboard</h4>
+                    <p style="color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem;">
+                        Track key growth indicators: MAU growth, premium user acquisition, conversion rates, and monthly growth trends over time.
+                    </p>
+                    <canvas id="acquisitionFunnelChart"></canvas>
+                </div>
+                
+                <!-- Cash Flow Runway -->
+                <div id="cash-runway-container" class="chart-container" style="display: none;">
+                    <h4 style="color: #ef4444; margin-bottom: 15px;">🏃 Cash Flow & Runway Analysis</h4>
+                    <p style="color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem;">
+                        Interactive cash burn analysis with scenario planning. Hover to see exact cash position and runway.
+                    </p>
+                    <canvas id="cashRunwayChart"></canvas>
+                </div>
+                
+                <!-- Unit Economics Dashboard -->
+                <div id="unit-economics-container" class="chart-container" style="display: none;">
+                    <h4 style="color: #8b5cf6; margin-bottom: 15px;">📈 Unit Economics Analysis</h4>
+                    <p style="color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem;">
+                        LTV:CAC analysis with profitability metrics. Interactive payback period visualization.
+                    </p>
+                    <canvas id="unitEconomicsChart"></canvas>
+                </div>
+                
+                <!-- Main Overview Chart (Original) -->
+                <div id="main-overview-container" class="chart-container" style="display: none;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">📊 Financial Overview</h4>
+                    <p style="color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem;">
+                        Complete financial overview with revenue, costs, and user growth trends.
+                    </p>
                     <canvas id="projectionChart"></canvas>
                 </div>
             </div>
@@ -963,8 +1233,11 @@
         </div>
     </div>
     
-    <!-- Chart.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Enhanced Chart.js with plugins for interactive visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -972,25 +1245,39 @@
     
     <!-- HTML2Canvas for screenshot functionality -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-        // Ensure libraries load before main script
-        window.addEventListener('load', function() {
-            console.log('Page loaded');
-            console.log('jsPDF available:', typeof window.jspdf);
-            if (window.jspdf && window.jspdf.jsPDF) {
-                console.log('jsPDF constructor available:', typeof window.jspdf.jsPDF);
-            }
-            if (typeof jsPDFAutoTable !== 'undefined') {
-                console.log('AutoTable plugin loaded:', typeof jsPDFAutoTable);
-            }
-        });
-    </script>
-    <!-- Load JavaScript modules in dependency order -->
+    
+    <!-- Load JavaScript modules in correct order -->
     <script src="js/utils.js"></script>
-    <script src="js/core.js"></script>
+    <script src="js/main.js"></script>
     <script src="js/charts.js"></script>
+    <script src="js/interactive-charts.js"></script>
     <script src="js/export.js"></script>
     <script src="js/scenarios.js"></script>
-    <script src="js/ui.js"></script>
+    <script>
+        // Define global variables to hold calculation results
+        var globalMonthlyData = [];
+        var globalSummary = {};
+        var globalParams = {};
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Initializing NutriSnap Financial Forecast...');
+
+            // Check if all functions are loaded
+            if (typeof calculateProjectionsWithValidation !== 'function' || typeof initializeUI !== 'function') {
+                console.error('Core functions not loaded. Check script paths.');
+                return;
+            }
+             console.log('✅ All required functions loaded');
+
+            initializeSliders();
+            initializeUI();
+            console.log('✅ UI initialized');
+
+            loadSavedProjections();
+            console.log('✅ Saved projections displayed');
+            
+            console.log('✅ Application initialization complete');
+        });
+    </script>
 </body>
 </html> 

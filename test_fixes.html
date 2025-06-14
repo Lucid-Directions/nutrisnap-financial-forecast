@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test All Fixes</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
+        .test-result { margin: 8px 0; padding: 8px 12px; border-radius: 4px; font-family: monospace; }
+        .pass { background: #10b981; }
+        .fail { background: #ef4444; }
+        .info { background: #3b82f6; }
+        button { margin: 5px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test All Critical Fixes</h1>
+    
+    <div id="testResults"></div>
+    
+    <button onclick="runTests()">🔧 Run All Tests</button>
+    
+    <iframe id="appFrame" src="index.html" style="width: 100%; height: 600px; margin-top: 20px; border: 1px solid #333;"></iframe>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('testResults').appendChild(resultDiv);
+        }
+        
+        function runTests() {
+            document.getElementById('testResults').innerHTML = '';
+            log('🚀 Starting comprehensive test of all fixes...', 'info');
+            
+            setTimeout(() => testApplicationInFrame(), 2000);
+        }
+        
+        function testApplicationInFrame() {
+            const iframe = document.getElementById('appFrame');
+            
+            try {
+                const iframeDoc = iframe.contentDocument;
+                const iframeWindow = iframe.contentWindow;
+                
+                if (!iframeDoc) {
+                    log('❌ Cannot access iframe document', 'fail');
+                    return;
+                }
+                
+                log('✅ Application iframe accessible', 'pass');
+                
+                // Test 1: Advertising Presets
+                log('🧪 Testing advertising presets...', 'info');
+                const adPreset = iframeDoc.getElementById('adPreset');
+                if (adPreset) {
+                    log('✅ Ad preset dropdown found', 'pass');
+                    
+                    // Test conservative preset
+                    adPreset.value = 'conservative';
+                    if (typeof iframeWindow.applyAdPreset === 'function') {
+                        iframeWindow.applyAdPreset();
+                        log('✅ Conservative preset applied', 'pass');
+                        
+                        // Check if banner eCPM was set
+                        const bannerECPM = iframeDoc.getElementById('bannerECPM');
+                        if (bannerECPM && bannerECPM.value > 0) {
+                            log('✅ Banner eCPM set by preset', 'pass');
+                        } else {
+                            log('❌ Banner eCPM not set correctly', 'fail');
+                        }
+                    } else {
+                        log('❌ applyAdPreset function not found', 'fail');
+                    }
+                } else {
+                    log('❌ Ad preset dropdown not found', 'fail');
+                }
+                
+                // Test 2: Tier Configuration
+                log('🧪 Testing tier configuration...', 'info');
+                const enableTier1 = iframeDoc.getElementById('enableTier1');
+                const tier1Group = iframeDoc.getElementById('tier1Group');
+                
+                if (enableTier1 && tier1Group) {
+                    log('✅ Tier controls found', 'pass');
+                    
+                    // Test disabling tier
+                    enableTier1.checked = false;
+                    enableTier1.dispatchEvent(new Event('change'));
+                    
+                    setTimeout(() => {
+                        if (tier1Group.style.display !== 'none') {
+                            log('✅ Tier remains visible when disabled', 'pass');
+                        } else {
+                            log('❌ Tier disappears when disabled', 'fail');
+                        }
+                        
+                        // Re-enable tier
+                        enableTier1.checked = true;
+                        enableTier1.dispatchEvent(new Event('change'));
+                    }, 100);
+                } else {
+                    log('❌ Tier controls not found', 'fail');
+                }
+                
+                // Test 3: Slider Ranges
+                log('🧪 Testing slider ranges...', 'info');
+                const testSliders = ['year1Growth', 'transactionFees', 'initialConversion'];
+                testSliders.forEach(sliderId => {
+                    const slider = iframeDoc.getElementById(sliderId);
+                    if (slider) {
+                        if (slider.min === '0' && slider.max === '100') {
+                            log(`✅ ${sliderId} has 0-100 range`, 'pass');
+                        } else {
+                            log(`❌ ${sliderId} range is ${slider.min}-${slider.max}`, 'fail');
+                        }
+                    } else {
+                        log(`❌ ${sliderId} slider not found`, 'fail');
+                    }
+                });
+                
+                // Test 4: Calculate and Check Table Headers
+                log('🧪 Testing calculation and table headers...', 'info');
+                const calculateBtn = iframeDoc.getElementById('calculateBtn');
+                if (calculateBtn && typeof iframeWindow.calculateProjectionsWithValidation === 'function') {
+                    calculateBtn.click();
+                    
+                    setTimeout(() => {
+                        const tableHeader = iframeDoc.getElementById('monthlyTableHeader');
+                        const tableBody = iframeDoc.getElementById('monthlyTableBody');
+                        
+                        if (tableHeader && tableBody) {
+                            const headerCells = tableHeader.children.length;
+                            const firstRow = tableBody.querySelector('tr');
+                            const dataCells = firstRow ? firstRow.children.length : 0;
+                            
+                            if (headerCells === dataCells) {
+                                log(`✅ Table headers match data (${headerCells} columns)`, 'pass');
+                            } else {
+                                log(`❌ Header/data mismatch (${headerCells} headers, ${dataCells} data)`, 'fail');
+                            }
+                            
+                            // Check if last columns have headers
+                            const lastHeaders = Array.from(tableHeader.children).slice(-4).map(th => th.textContent);
+                            if (lastHeaders.every(header => header.trim() !== '')) {
+                                log('✅ Last 4 columns have headers', 'pass');
+                            } else {
+                                log('❌ Missing headers in last columns', 'fail');
+                            }
+                        } else {
+                            log('❌ Table elements not found', 'fail');
+                        }
+                        
+                        // Check if results are populated
+                        const finalMAU = iframeDoc.getElementById('finalMAU');
+                        if (finalMAU && finalMAU.textContent && finalMAU.textContent !== '-') {
+                            log('✅ Results populated correctly', 'pass');
+                        } else {
+                            log('❌ Results not populated', 'fail');
+                        }
+                    }, 3000);
+                } else {
+                    log('❌ Calculate button or function not found', 'fail');
+                }
+                
+                // Test 5: Cohort Tracking
+                log('🧪 Testing cohort tracking...', 'info');
+                const enableCohort = iframeDoc.getElementById('enableCohortTracking');
+                const retentionSlider = iframeDoc.getElementById('initialRetentionRate');
+                
+                if (enableCohort && retentionSlider) {
+                    enableCohort.checked = true;
+                    enableCohort.dispatchEvent(new Event('change'));
+                    
+                    if (retentionSlider.getAttribute('oninput')) {
+                        log('✅ Cohort sliders have update handlers', 'pass');
+                    } else {
+                        log('❌ Cohort sliders missing update handlers', 'fail');
+                    }
+                } else {
+                    log('❌ Cohort tracking elements not found', 'fail');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing application: ${error.message}`, 'fail');
+            }
+        }
+        
+        // Auto-run tests after page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000);
+        });
+    </script>
+</body>
+</html>

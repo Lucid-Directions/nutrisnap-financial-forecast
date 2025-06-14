@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Testing Calculate Function</h1>
+    <button onclick="testCalculate()">Test Calculate</button>
+    <div id="results"></div>
+
+    <!-- Load scripts in same order as main file -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="js/utils.js"></script>
+    <script src="js/validator.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/scenarios.js"></script>
+    <script src="js/ui.js"></script>
+
+    <script>
+        function testCalculate() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Testing...<br>';
+            
+            // Check if functions exist
+            resultsDiv.innerHTML += `calculateProjections exists: ${typeof calculateProjections === 'function'}<br>`;
+            resultsDiv.innerHTML += `formatCurrency exists: ${typeof formatCurrency === 'function'}<br>`;
+            resultsDiv.innerHTML += `displayResults exists: ${typeof displayResults === 'function'}<br>`;
+            
+            // Try to load the main page in iframe and test
+            const iframe = document.createElement('iframe');
+            iframe.src = './index.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '600px';
+            document.body.appendChild(iframe);
+            
+            setTimeout(() => {
+                try {
+                    const iframeWin = iframe.contentWindow;
+                    const iframeDoc = iframe.contentDocument;
+                    
+                    resultsDiv.innerHTML += `<br>--- Iframe Test ---<br>`;
+                    resultsDiv.innerHTML += `calculateProjections in iframe: ${typeof iframeWin.calculateProjections === 'function'}<br>`;
+                    
+                    const appPriceEl = iframeDoc.getElementById('appPrice');
+                    resultsDiv.innerHTML += `appPrice element found: ${!!appPriceEl}<br>`;
+                    resultsDiv.innerHTML += `appPrice value: ${appPriceEl?.value}<br>`;
+                    
+                    if (typeof iframeWin.calculateProjections === 'function') {
+                        resultsDiv.innerHTML += `<br>Attempting calculation...<br>`;
+                        iframeWin.calculateProjections(true);
+                        
+                        setTimeout(() => {
+                            const outputSection = iframeDoc.getElementById('outputSection');
+                            resultsDiv.innerHTML += `Output section visible: ${outputSection?.style.display !== 'none'}<br>`;
+                            
+                            const finalMAU = iframeDoc.getElementById('finalMAU');
+                            resultsDiv.innerHTML += `Final MAU: ${finalMAU?.textContent || 'not found'}<br>`;
+                        }, 2000);
+                    }
+                    
+                } catch (error) {
+                    resultsDiv.innerHTML += `Error: ${error.message}<br>`;
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

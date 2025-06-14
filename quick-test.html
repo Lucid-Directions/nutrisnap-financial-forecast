@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Function Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; background: #1a1a1a; border-radius: 4px; }
+        .pass { border-left: 4px solid #10b981; }
+        .fail { border-left: 4px solid #ef4444; }
+        button { margin: 5px; padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Quick Function Test</h1>
+    <button onclick="runTest()">🧪 Test Core Functions</button>
+    <div id="results"></div>
+
+    <!-- Load scripts in correct order -->
+    <script src="js/utils.js"></script>
+    <script src="js/validator.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/scenarios.js"></script>
+
+    <script>
+        function runTest() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            // Test 1: Check if core functions exist
+            const functions = [
+                'calculateProjections',
+                'formatCurrency', 
+                'formatNumber',
+                'displayResults',
+                'saveCurrentProjection',
+                'loadProjection'
+            ];
+            
+            functions.forEach(funcName => {
+                const exists = typeof window[funcName] === 'function';
+                results.innerHTML += `
+                    <div class="test ${exists ? 'pass' : 'fail'}">
+                        ${exists ? '✅' : '❌'} ${funcName}: ${exists ? 'Available' : 'Missing'}
+                    </div>
+                `;
+            });
+            
+            // Test 2: Test formatCurrency
+            try {
+                const currency = formatCurrency(1234.56);
+                const isValid = currency.includes('£') && currency.includes('1,235');
+                results.innerHTML += `
+                    <div class="test ${isValid ? 'pass' : 'fail'}">
+                        ${isValid ? '✅' : '❌'} formatCurrency(1234.56): ${currency}
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <div class="test fail">
+                        ❌ formatCurrency error: ${error.message}
+                    </div>
+                `;
+            }
+            
+            // Test 3: Test formatNumber
+            try {
+                const number = formatNumber(1234);
+                const isValid = number === '1,234';
+                results.innerHTML += `
+                    <div class="test ${isValid ? 'pass' : 'fail'}">
+                        ${isValid ? '✅' : '❌'} formatNumber(1234): ${number}
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <div class="test fail">
+                        ❌ formatNumber error: ${error.message}
+                    </div>
+                `;
+            }
+            
+            // Test 4: Create minimal form elements and test calculation
+            createMinimalForm();
+            setTimeout(() => {
+                try {
+                    console.log('Testing calculateProjections...');
+                    calculateProjections(true);
+                    results.innerHTML += `
+                        <div class="test pass">
+                            ✅ calculateProjections executed without error
+                        </div>
+                    `;
+                } catch (error) {
+                    results.innerHTML += `
+                        <div class="test fail">
+                            ❌ calculateProjections error: ${error.message}
+                        </div>
+                    `;
+                }
+            }, 500);
+        }
+        
+        function createMinimalForm() {
+            // Create minimal required elements for testing
+            const formHTML = `
+                <div id="testForm" style="display: none;">
+                    <input type="number" id="appPrice" value="9.99">
+                    <input type="number" id="startingMAU" value="1000">
+                    <select id="projectionPeriod"><option value="36" selected>36</option></select>
+                    <input type="range" id="year1Growth" value="16" min="0" max="50">
+                    <input type="range" id="year2Growth" value="12" min="0" max="50">
+                    <input type="range" id="year3Growth" value="8" min="0" max="50">
+                    <input type="range" id="initialConversion" value="2" min="0" max="10" step="0.1">
+                    <input type="range" id="finalConversion" value="5" min="0" max="10" step="0.1">
+                    <input type="range" id="freeChurnRate" value="20" min="0" max="50">
+                    <input type="range" id="paidChurnRate" value="5" min="0" max="30">
+                    <input type="range" id="churnImprovement" value="10" min="0" max="50">
+                    <input type="range" id="annualDiscount" value="15" min="0" max="50">
+                    <input type="number" id="teamCostY1" value="4500">
+                    <input type="number" id="teamCostY2" value="12000">
+                    <input type="number" id="teamCostY3" value="25000">
+                    <input type="number" id="techCostY1" value="800">
+                    <input type="number" id="techCostY2" value="1800">
+                    <input type="number" id="techCostY3" value="4000">
+                    <input type="number" id="marketingCostY1" value="1200">
+                    <input type="number" id="marketingCostY2" value="3500">
+                    <input type="number" id="marketingCostY3" value="8000">
+                    <input type="number" id="betaUsersM0" value="0">
+                    <input type="number" id="betaTeamCostM0" value="0">
+                    <input type="number" id="betaTechCostM0" value="0">
+                    <input type="number" id="betaMarketingCostM0" value="0">
+                    <input type="number" id="betaUsersM1" value="0">
+                    <input type="number" id="betaTeamCostM1" value="0">
+                    <input type="number" id="betaTechCostM1" value="0">
+                    <input type="number" id="betaMarketingCostM1" value="0">
+                    <input type="number" id="betaUsersM2" value="0">
+                    <input type="number" id="betaTeamCostM2" value="0">
+                    <input type="number" id="betaTechCostM2" value="0">
+                    <input type="number" id="betaMarketingCostM2" value="0">
+                    <input type="number" id="seedInvestment" value="250000">
+                    <input type="number" id="equityOffered" value="12">
+                    <input type="number" id="valuationMultiple" value="5">
+                    <input type="number" id="b2bStartMonth" value="12">
+                    <input type="range" id="b2bPercentage" value="25" min="0" max="100">
+                    <input type="checkbox" id="enableTieredPricing">
+                    <input type="checkbox" id="enableVariableCosts">
+                    <input type="checkbox" id="enableAdvertisingRevenue">
+                    <input type="number" id="adRevenueStartMonth" value="6">
+                    <input type="range" id="adRevenueGrowth" value="10" min="0" max="50">
+                    <input type="checkbox" id="enableBannerAds">
+                    <input type="number" id="bannerECPM" value="2.50" step="0.01">
+                    <input type="number" id="bannerImpressions" value="20">
+                    <input type="checkbox" id="enableInterstitialAds">
+                    <input type="number" id="interstitialECPM" value="8.00" step="0.01">
+                    <input type="number" id="interstitialImpressions" value="4">
+                    <input type="checkbox" id="enableRewardedAds">
+                    <input type="number" id="rewardedECPM" value="25.00" step="0.01">
+                    <input type="number" id="rewardedImpressions" value="2">
+                    <div id="outputSection" style="display: none;">
+                        <div id="finalMAU"></div>
+                        <div id="finalARR"></div>
+                        <div id="breakEvenMonth"></div>
+                        <table><tbody id="monthlyTableBody"></tbody></table>
+                    </div>
+                    <div id="calculationStatus"></div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', formHTML);
+        }
+    </script>
+</body>
+</html>

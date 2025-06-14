@@ -2,6 +2,143 @@
 // Handles Chart.js integration and data visualization
 
 let revenueChart = null;
+let revenueCompositionChart = null;
+
+function updateRevenueCompositionChart(summaryData) {
+    const ctx = document.getElementById('revenueCompositionChart');
+    const card = document.getElementById('revenueCompositionCard');
+    if (!ctx || !card) {
+        console.warn('⚠️ Revenue composition chart canvas or card not found');
+        return;
+    }
+
+    if (revenueCompositionChart) {
+        revenueCompositionChart.destroy();
+    }
+
+    const adData = summaryData?.advertisingRevenueData;
+    
+    console.log('📊 Revenue Composition Chart Data:', {
+        adData: adData,
+        totalRevenue: summaryData?.totalRevenue,
+        hasAdvertising: !!adData && adData.totalAdvertisingRevenue > 0
+    });
+
+    // Calculate subscription revenue (total revenue minus advertising revenue)
+    const totalRevenue = summaryData?.totalRevenue || 0;
+    const totalAdvertisingRevenue = adData?.totalAdvertisingRevenue || 0;
+    const subscriptionRevenue = totalRevenue - totalAdvertisingRevenue;
+
+    // Hide card if no revenue at all
+    if (totalRevenue <= 0) {
+        card.style.display = 'none';
+        console.log('📊 Hiding revenue composition chart - no revenue');
+        return;
+    }
+    
+    card.style.display = 'block';
+
+    const labels = [];
+    const data = [];
+    const backgroundColors = [];
+
+    // Always show subscription revenue if it exists
+    if (subscriptionRevenue > 0) {
+        labels.push('Subscription');
+        data.push(subscriptionRevenue);
+        backgroundColors.push('#667eea');
+    }
+    
+    // Show advertising revenue breakdown if enabled and has revenue
+    if (adData && totalAdvertisingRevenue > 0) {
+        if (adData.totalBannerRevenue > 0) {
+            labels.push('Banner Ads');
+            data.push(adData.totalBannerRevenue);
+            backgroundColors.push('#34d399');
+        }
+        if (adData.totalInterstitialRevenue > 0) {
+            labels.push('Interstitial Ads');
+            data.push(adData.totalInterstitialRevenue);
+            backgroundColors.push('#fbbf24');
+        }
+        if (adData.totalRewardedRevenue > 0) {
+            labels.push('Rewarded Ads');
+            data.push(adData.totalRewardedRevenue);
+            backgroundColors.push('#f472b6');
+        }
+    }
+
+    console.log('📊 Chart data prepared:', { labels, data, backgroundColors });
+
+    revenueCompositionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue Source',
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: '#1f2937',
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#9ca3af',
+                        padding: 15,
+                        font: {
+                            size: 12
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    borderColor: '#667eea',
+                    borderWidth: 2,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += formatCurrency(context.parsed);
+                                // Add percentage
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ` (${percentage}%)`;
+                            }
+                            return label;
+                        }
+                    }
+                },
+                // Disable data labels to keep chart clean
+                datalabels: {
+                    display: false
+                }
+            },
+            // Remove any data label plugins that might show numbers on chart
+            layout: {
+                padding: 20
+            }
+        }
+    });
+}
 
 function updateChart(data) {
     const ctx = document.getElementById('projectionChart');

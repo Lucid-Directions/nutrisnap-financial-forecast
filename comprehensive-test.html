@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Function Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; background: #1a1a1a; border-radius: 8px; }
+        .test-result { margin: 5px 0; padding: 5px; border-radius: 4px; }
+        .pass { background: #10b981; color: white; }
+        .fail { background: #ef4444; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        button { margin: 5px; padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #testResults { font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>NutriSnap Financial Forecast - Comprehensive Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="testBasicCalculation()">📊 Test Basic Calculation</button>
+        <button onclick="testSaveLoad()">💾 Test Save/Load</button>
+        <button onclick="testFormElements()">📝 Test Form Elements</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <!-- Load all application scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="js/utils.js"></script>
+    <script src="js/validator.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/scenarios.js"></script>
+    <script src="js/ui.js"></script>
+
+    <script>
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const result = { timestamp, message, type };
+            testResults.push(result);
+            updateDisplay();
+            console.log(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+        }
+
+        function updateDisplay() {
+            const container = document.getElementById('testResults');
+            container.innerHTML = testResults.map(result => 
+                `<div class="test-result ${result.type}">[${result.timestamp}] ${result.message}</div>`
+            ).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResults() {
+            testResults = [];
+            updateDisplay();
+        }
+
+        async function runAllTests() {
+            clearResults();
+            log('🚀 Starting comprehensive test suite...', 'info');
+            
+            // Test 1: Script Loading
+            await testScriptLoading();
+            
+            // Test 2: Create mock HTML elements
+            await createMockElements();
+            
+            // Test 3: Test core functions
+            await testCoreFunctions();
+            
+            // Test 4: Test basic calculation
+            await testBasicCalculation();
+            
+            // Test 5: Test form elements
+            await testFormElements();
+            
+            // Test 6: Test save/load functionality
+            await testSaveLoad();
+            
+            log('✅ All tests completed!', 'pass');
+        }
+
+        async function testScriptLoading() {
+            log('📦 Testing script loading...', 'info');
+            
+            const requiredFunctions = [
+                'calculateProjections',
+                'formatCurrency',
+                'formatNumber',
+                'displayResults',
+                'saveCurrentProjection',
+                'loadProjection',
+                'updateSliderValue'
+            ];
+
+            requiredFunctions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    log(`✅ ${funcName} loaded correctly`, 'pass');
+                } else {
+                    log(`❌ ${funcName} not found or not a function`, 'fail');
+                }
+            });
+        }
+
+        async function createMockElements() {
+            log('🏗️ Creating mock HTML elements...', 'info');
+            
+            // Create a mock form with all required elements
+            const mockHTML = `
+                <div id="mockApp" style="display: none;">
+                    <!-- Core inputs -->
+                    <input type="number" id="appPrice" value="9.99">
+                    <input type="number" id="startingMAU" value="1000">
+                    <select id="projectionPeriod"><option value="36" selected>36</option></select>
+                    
+                    <!-- Growth rates -->
+                    <input type="range" id="year1Growth" value="16" min="0" max="50">
+                    <input type="range" id="year2Growth" value="12" min="0" max="50">
+                    <input type="range" id="year3Growth" value="8" min="0" max="50">
+                    
+                    <!-- Conversion rates -->
+                    <input type="range" id="initialConversion" value="2" min="0" max="10" step="0.1">
+                    <input type="range" id="finalConversion" value="5" min="0" max="10" step="0.1">
+                    
+                    <!-- Churn rates -->
+                    <input type="range" id="freeChurnRate" value="20" min="0" max="50">
+                    <input type="range" id="paidChurnRate" value="5" min="0" max="30">
+                    <input type="range" id="churnImprovement" value="10" min="0" max="50">
+                    
+                    <!-- Annual discount -->
+                    <input type="range" id="annualDiscount" value="15" min="0" max="50">
+                    
+                    <!-- Costs -->
+                    <input type="number" id="teamCostY1" value="4500">
+                    <input type="number" id="teamCostY2" value="12000">
+                    <input type="number" id="teamCostY3" value="25000">
+                    <input type="number" id="techCostY1" value="800">
+                    <input type="number" id="techCostY2" value="1800">
+                    <input type="number" id="techCostY3" value="4000">
+                    <input type="number" id="marketingCostY1" value="1200">
+                    <input type="number" id="marketingCostY2" value="3500">
+                    <input type="number" id="marketingCostY3" value="8000">
+                    
+                    <!-- Beta period -->
+                    <input type="number" id="betaUsersM0" value="0">
+                    <input type="number" id="betaTeamCostM0" value="0">
+                    <input type="number" id="betaTechCostM0" value="0">
+                    <input type="number" id="betaMarketingCostM0" value="0">
+                    <input type="number" id="betaUsersM1" value="0">
+                    <input type="number" id="betaTeamCostM1" value="0">
+                    <input type="number" id="betaTechCostM1" value="0">
+                    <input type="number" id="betaMarketingCostM1" value="0">
+                    <input type="number" id="betaUsersM2" value="0">
+                    <input type="number" id="betaTeamCostM2" value="0">
+                    <input type="number" id="betaTechCostM2" value="0">
+                    <input type="number" id="betaMarketingCostM2" value="0">
+                    
+                    <!-- Investment -->
+                    <input type="number" id="seedInvestment" value="250000">
+                    <input type="number" id="equityOffered" value="12">
+                    <input type="number" id="valuationMultiple" value="5">
+                    
+                    <!-- B2B -->
+                    <input type="number" id="b2bStartMonth" value="12">
+                    <input type="range" id="b2bPercentage" value="25" min="0" max="100">
+                    
+                    <!-- Advanced features toggles -->
+                    <input type="checkbox" id="enableTieredPricing">
+                    <input type="checkbox" id="enableVariableCosts">
+                    <input type="checkbox" id="enableAdvertisingRevenue">
+                    
+                    <!-- Advertising revenue -->
+                    <input type="number" id="adRevenueStartMonth" value="6">
+                    <input type="range" id="adRevenueGrowth" value="10" min="0" max="50">
+                    <input type="checkbox" id="enableBannerAds">
+                    <input type="number" id="bannerECPM" value="2.50" step="0.01">
+                    <input type="number" id="bannerImpressions" value="20">
+                    <input type="checkbox" id="enableInterstitialAds">
+                    <input type="number" id="interstitialECPM" value="8.00" step="0.01">
+                    <input type="number" id="interstitialImpressions" value="4">
+                    <input type="checkbox" id="enableRewardedAds">
+                    <input type="number" id="rewardedECPM" value="25.00" step="0.01">
+                    <input type="number" id="rewardedImpressions" value="2">
+                    
+                    <!-- Output elements -->
+                    <div id="outputSection" style="display: none;">
+                        <div id="finalMAU"></div>
+                        <div id="finalARR"></div>
+                        <div id="breakEvenMonth"></div>
+                        <div id="totalRevenue"></div>
+                        <div id="totalCosts"></div>
+                        <div id="netProfit"></div>
+                        <table><tbody id="monthlyTableBody"></tbody></table>
+                    </div>
+                    
+                    <!-- Save/load elements -->
+                    <input type="text" id="saveProjectionName" placeholder="Projection name">
+                    <div id="savedScenarios"></div>
+                    
+                    <!-- Status element -->
+                    <div id="calculationStatus"></div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', mockHTML);
+            log('✅ Mock HTML elements created', 'pass');
+        }
+
+        async function testCoreFunctions() {
+            log('🔧 Testing core functions...', 'info');
+            
+            // Test formatCurrency
+            try {
+                const result = formatCurrency(1234.56);
+                if (result.includes('£') && result.includes('1,235')) {
+                    log('✅ formatCurrency working correctly', 'pass');
+                } else {
+                    log(`❌ formatCurrency returned unexpected result: ${result}`, 'fail');
+                }
+            } catch (error) {
+                log(`❌ formatCurrency error: ${error.message}`, 'fail');
+            }
+            
+            // Test formatNumber
+            try {
+                const result = formatNumber(1234);
+                if (result === '1,234') {
+                    log('✅ formatNumber working correctly', 'pass');
+                } else {
+                    log(`❌ formatNumber returned unexpected result: ${result}`, 'fail');
+                }
+            } catch (error) {
+                log(`❌ formatNumber error: ${error.message}`, 'fail');
+            }
+            
+            // Test updateSliderValue
+            try {
+                const slider = document.getElementById('year1Growth');
+                if (slider) {
+                    updateSliderValue(slider);
+                    log('✅ updateSliderValue executed without error', 'pass');
+                } else {
+                    log('❌ Could not find slider element for updateSliderValue test', 'fail');
+                }
+            } catch (error) {
+                log(`❌ updateSliderValue error: ${error.message}`, 'fail');
+            }
+        }
+
+        async function testBasicCalculation() {
+            log('📊 Testing basic calculation...', 'info');
+            
+            try {
+                // Set default values
+                document.getElementById('appPrice').value = '9.99';
+                document.getElementById('startingMAU').value = '1000';
+                document.getElementById('initialConversion').value = '2';
+                document.getElementById('finalConversion').value = '5';
+                
+                log('📝 Set basic form values', 'info');
+                
+                // Run calculation
+                if (typeof calculateProjections === 'function') {
+                    log('🔄 Calling calculateProjections...', 'info');
+                    
+                    // Capture console output
+                    const originalConsoleLog = console.log;
+                    const consoleLogs = [];
+                    console.log = (...args) => {
+                        consoleLogs.push(args.join(' '));
+                        originalConsoleLog(...args);
+                    };
+                    
+                    calculateProjections(true);
+                    
+                    // Restore console.log
+                    console.log = originalConsoleLog;
+                    
+                    // Check if calculation completed
+                    setTimeout(() => {
+                        const hasCalculationLogs = consoleLogs.some(log => 
+                            log.includes('Starting calculateProjections') || 
+                            log.includes('Projections calculated')
+                        );
+                        
+                        if (hasCalculationLogs) {
+                            log('✅ calculateProjections executed with console output', 'pass');
+                        } else {
+                            log('⚠️ calculateProjections executed but no expected console output', 'warning');
+                        }
+                        
+                        // Check if output elements were populated
+                        const finalMAU = document.getElementById('finalMAU')?.textContent;
+                        const finalARR = document.getElementById('finalARR')?.textContent;
+                        
+                        if (finalMAU && finalMAU !== '') {
+                            log(`✅ Final MAU populated: ${finalMAU}`, 'pass');
+                        } else {
+                            log('❌ Final MAU not populated', 'fail');
+                        }
+                        
+                        if (finalARR && finalARR !== '') {
+                            log(`✅ Final ARR populated: ${finalARR}`, 'pass');
+                        } else {
+                            log('❌ Final ARR not populated', 'fail');
+                        }
+                        
+                        // Check if output section is visible
+                        const outputSection = document.getElementById('outputSection');
+                        if (outputSection && outputSection.style.display !== 'none') {
+                            log('✅ Output section is visible', 'pass');
+                        } else {
+                            log('❌ Output section is not visible', 'fail');
+                        }
+                        
+                    }, 2000);
+                    
+                } else {
+                    log('❌ calculateProjections function not found', 'fail');
+                }
+                
+            } catch (error) {
+                log(`❌ Basic calculation test error: ${error.message}`, 'fail');
+                console.error('Calculation test error:', error);
+            }
+        }
+
+        async function testFormElements() {
+            log('📝 Testing form elements...', 'info');
+            
+            const requiredElements = [
+                'appPrice', 'startingMAU', 'projectionPeriod',
+                'year1Growth', 'initialConversion', 'finalConversion',
+                'teamCostY1', 'marketingCostY1', 'seedInvestment'
+            ];
+            
+            let foundElements = 0;
+            requiredElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    foundElements++;
+                    log(`✅ Found element: ${id} (value: ${element.value})`, 'pass');
+                } else {
+                    log(`❌ Missing element: ${id}`, 'fail');
+                }
+            });
+            
+            log(`📊 Found ${foundElements}/${requiredElements.length} required elements`, 
+                foundElements === requiredElements.length ? 'pass' : 'fail');
+        }
+
+        async function testSaveLoad() {
+            log('💾 Testing save/load functionality...', 'info');
+            
+            try {
+                // Test saving
+                const saveNameInput = document.getElementById('saveProjectionName');
+                if (saveNameInput) {
+                    saveNameInput.value = 'Test Projection';
+                    
+                    if (typeof saveCurrentProjection === 'function') {
+                        saveCurrentProjection();
+                        log('✅ saveCurrentProjection executed', 'pass');
+                        
+                        // Check localStorage
+                        const saved = localStorage.getItem('nutriSnapProjections');
+                        if (saved) {
+                            const projections = JSON.parse(saved);
+                            if (projections['Test Projection']) {
+                                log('✅ Projection saved to localStorage', 'pass');
+                                
+                                // Test loading
+                                if (typeof loadProjection === 'function') {
+                                    loadProjection('Test Projection');
+                                    log('✅ loadProjection executed', 'pass');
+                                } else {
+                                    log('❌ loadProjection function not found', 'fail');
+                                }
+                            } else {
+                                log('❌ Projection not found in localStorage', 'fail');
+                            }
+                        } else {
+                            log('❌ No data saved to localStorage', 'fail');
+                        }
+                    } else {
+                        log('❌ saveCurrentProjection function not found', 'fail');
+                    }
+                } else {
+                    log('❌ saveProjectionName input not found', 'fail');
+                }
+                
+            } catch (error) {
+                log(`❌ Save/load test error: ${error.message}`, 'fail');
+            }
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🎯 Test page loaded, ready for testing', 'info');
+                log('👆 Click "Run All Tests" to start comprehensive testing', 'info');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

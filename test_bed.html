@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSnap Financial Forecast - TEST BED</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🥗 NutriSnap Financial Forecast - TEST BED</h1>
+            <p>Comprehensive financial modeling for your AI-powered nutrition app</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="config-column">
+                <!-- Tier Configuration -->
+                <div class="card">
+                    <h2 class="card-title">💎 Tier Configuration</h2>
+                    <div id="tierContainer">
+                        <!-- Tier 1 -->
+                        <div class="tier-card" id="tier1">
+                            <div class="tier-header">
+                                <h3>Tier 1: Premium</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enableTier1" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="tier-body">
+                                <div class="input-group">
+                                    <label>Price (£)</label>
+                                    <input type="number" id="basicPrice" value="5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Conversion (%)</label>
+                                    <input type="number" id="basicConversion" value="60">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tier 2 -->
+                        <div class="tier-card" id="tier2">
+                            <div class="tier-header">
+                                <h3>Tier 2: Pro</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enableTier2" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="tier-body">
+                                <div class="input-group">
+                                    <label>Price (£)</label>
+                                    <input type="number" id="proPrice" value="10">
+                                </div>
+                                <div class="input-group">
+                                    <label>Conversion (%)</label>
+                                    <input type="number" id="proConversion" value="30">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tier 3 -->
+                        <div class="tier-card" id="tier3">
+                             <div class="tier-header">
+                                <h3>Tier 3: Max</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enableTier3" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="tier-body">
+                                <div class="input-group">
+                                    <label>Price (£)</label>
+                                    <input type="number" id="enterprisePrice" value="20">
+                                </div>
+                                <div class="input-group">
+                                    <label>Conversion (%)</label>
+                                    <input type="number" id="enterpriseConversion" value="10">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="addTierBtn" class="secondary-btn" style="margin-top: 15px;">+ Add Tier</button>
+                </div>
+
+                <!-- Advertising Revenue -->
+                <div class="card">
+                    <h2 class="card-title">📢 Advertising Revenue</h2>
+                     <div class="input-group">
+                        <label>Presets</label>
+                        <div class="preset-buttons">
+                            <button class="preset-btn" data-preset="low">Low</button>
+                            <button class="preset-btn" data-preset="medium">Medium</button>
+                            <button class="preset-btn" data-preset="high">High</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="bannerECPM">Banner eCPM (£)</label>
+                        <input type="range" id="bannerECPM" min="0" max="10" step="0.1" value="1">
+                        <span id="bannerECPMValue">£1.00</span>
+                    </div>
+                </div>
+
+                 <!-- Action Buttons -->
+                <div class="card">
+                    <button id="calculateBtn" class="primary-btn">Calculate Projection</button>
+                </div>
+            </div>
+
+            <div class="results-column">
+                <!-- Key Metrics -->
+                <div class="card">
+                    <h2 class="card-title">📊 Key Metrics</h2>
+                    <div id="keyMetrics" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                        <!-- Metrics will be injected here by JS -->
+                    </div>
+                     <div id="validationResults"></div>
+                </div>
+
+                <!-- Charts -->
+                <div class="card">
+                    <h2 class="card-title">📈 Charts</h2>
+                    <canvas id="mauChart"></canvas>
+                </div>
+                
+                <!-- Financial Table -->
+                <div class="card">
+                    <h2 class="card-title">💰 Financial Breakdown</h2>
+                    <div class="table-container">
+                        <table id="resultsTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/scenarios.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Mockup of the full UI initialization
+        if (typeof initializeUI === 'function') {
+            console.log("Original initializeUI found and called.");
+            initializeUI();
+        } else {
+            console.log("Running fallback test initialization.");
+            
+            // Fallback listeners if initializeUI is not yet fixed
+            const calcBtn = document.getElementById('calculateBtn');
+            if (calcBtn) {
+                calcBtn.addEventListener('click', () => {
+                    console.log("Test calculate button clicked.");
+                    if (typeof calculateProjectionsWithValidation === 'function') {
+                        calculateProjectionsWithValidation(true);
+                    } else {
+                        alert("Calculation function not found!");
+                    }
+                });
+            }
+
+            // Ad presets
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const preset = e.target.dataset.preset;
+                    console.log("Preset button clicked:", preset);
+                    const bannerSlider = document.getElementById('bannerECPM');
+                    if(preset === 'low') bannerSlider.value = 1;
+                    if(preset === 'medium') bannerSlider.value = 3;
+                    if(preset === 'high') bannerSlider.vealue = 7;
+                    
+                    // Manually trigger update
+                    const event = new Event('input');
+                    bannerSlider.dispatchEvent(event);
+                });
+            });
+
+            // Tier toggles
+            ['enableTier1', 'enableTier2', 'enableTier3'].forEach((id, i) => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) {
+                    checkbox.addEventListener('change', () => {
+                        console.log(`Tier ${i+1} checkbox changed.`);
+                        if (typeof toggleTierVisibility === 'function') {
+                            toggleTierVisibility(i + 1);
+                        } else {
+                             const tierCard = document.getElementById(`tier${i+1}`);
+                             if(checkbox.checked) {
+                                 tierCard.style.display = '';
+                             } else {
+                                 tierCard.style.display = 'none';
+                             }
+                        }
+                    });
+                }
+            });
+
+            // Add tier button
+            const addTierBtn = document.getElementById('addTierBtn');
+            if(addTierBtn) {
+                addTierBtn.addEventListener('click', () => {
+                    alert("Add tier functionality not implemented yet.");
+                });
+            }
+        }
+    });
+    </script>
+</body>
+</html> 

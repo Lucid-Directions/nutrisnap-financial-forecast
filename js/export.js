@@ -2,113 +2,69 @@
 // Handles CSV, PDF export, and screenshot features
 
 function exportToCSV() {
-    if (!globalMonthlyData || globalMonthlyData.length === 0) {
+    console.log('Exporting to CSV...');
+    
+    // Get data from the current calculation results
+    const tableBody = document.getElementById('monthlyTableBody');
+    if (!tableBody || !tableBody.children.length) {
         alert('No data available to export. Please run calculations first.');
         return;
     }
-
-    try {
-        // Get summary data with proper null checking
-        const summary = globalSummaryData || {};
-        const params = summary.parameters || {};
-        
-        let csv = 'NUTRISNAP FINANCIAL FORECAST\n';
-        csv += `Generated on: ${new Date().toLocaleDateString()}\n\n`;
-        
-        // Parameters Section with safe access
-        csv += 'INPUT PARAMETERS\n';
-        csv += 'Parameter,Value\n';
-        csv += `Projection Period,${params.projectionMonths || 36} months\n`;
-        csv += `Starting MAU,${(params.startingMAU || 0).toLocaleString()}\n`;
-        csv += `App Price,${formatCurrency(params.appPrice || 0)}/month\n`;
-        csv += `Annual Discount,${((params.annualDiscount || 0) * 100).toFixed(1)}%\n`;
-        csv += `Annual Plan %,${((params.annualPlanPercentage || 0) * 100).toFixed(1)}%\n`;
-        csv += `Initial Conversion,${((params.initialConversion || 0) * 100).toFixed(1)}%\n`;
-        csv += `Conversion Growth,${((params.conversionGrowth || 0) * 100).toFixed(1)}% annually\n`;
-        csv += `Free User Churn,${((params.freeChurnRate || 0) * 100).toFixed(1)}%\n`;
-        csv += `Paid User Churn,${((params.paidChurnRate || 0) * 100).toFixed(1)}%\n`;
-        csv += `Churn Improvement,${((params.churnImprovement || 0) * 100).toFixed(1)}%\n`;
-        csv += `Year 1 Growth,${((params.growthRates?.[1] || 0) * 100).toFixed(1)}%\n`;
-        csv += `Year 2 Growth,${((params.growthRates?.[2] || 0) * 100).toFixed(1)}%\n`;
-        csv += `Year 3 Growth,${((params.growthRates?.[3] || 0) * 100).toFixed(1)}%\n`;
-        csv += `Team Cost Y1,${formatCurrency(params.teamCosts?.[1] || 0)}\n`;
-        csv += `Team Cost Y2,${formatCurrency(params.teamCosts?.[2] || 0)}\n`;
-        csv += `Team Cost Y3,${formatCurrency(params.teamCosts?.[3] || 0)}\n`;
-        csv += `Tech Cost Y1,${formatCurrency(params.techCosts?.[1] || 0)}\n`;
-        csv += `Tech Cost Y2,${formatCurrency(params.techCosts?.[2] || 0)}\n`;
-        csv += `Tech Cost Y3,${formatCurrency(params.techCosts?.[3] || 0)}\n`;
-        csv += `Marketing Cost Y1,${formatCurrency(params.marketingCosts?.[1] || 0)}\n`;
-        csv += `Marketing Cost Y2,${formatCurrency(params.marketingCosts?.[2] || 0)}\n`;
-        csv += `Marketing Cost Y3,${formatCurrency(params.marketingCosts?.[3] || 0)}\n`;
-        csv += `B2B Start Month,${params.b2bStartMonth || 'N/A'}\n`;
-        csv += `B2B Revenue %,${((params.b2bPercentage || 0) * 100).toFixed(0)}%\n`;
-        csv += `Seed Investment,${formatCurrency(params.seedInvestment || 0)}\n`;
-        csv += `Equity Offered,${((params.equityOffered || 0) * 100).toFixed(1)}%\n`;
-        csv += `Exit Multiple,${params.valuationMultiple || 0}x ARR\n\n`;
-        
-        // Financial Summary Section with null checks
-        csv += 'FINANCIAL SUMMARY\n';
-        csv += 'Metric,Value\n';
-        csv += `Final MAU,${(summary.finalMAU || 0).toLocaleString()}\n`;
-        csv += `Final ARR,${formatCurrency(summary.finalARR || 0)}\n`;
-        csv += `Break-even Month,${summary.breakEvenMonth || 'Not reached'}\n`;
-        csv += `Exit Valuation,${formatCurrency(summary.exitValuation || 0)}\n`;
-        csv += `Investor Return,${formatCurrency(summary.investorReturn || 0)} (${(summary.returnMultiple || 0).toFixed(1)}x)\n`;
-        csv += `Total Revenue,${formatCurrency(summary.totalRevenue || 0)}\n`;
-        csv += `Total Costs,${formatCurrency(summary.totalCosts || 0)}\n`;
-        csv += `Net Profit/Loss,${formatCurrency(summary.netProfit || 0)}\n`;
-        csv += `LTV:CAC Ratio,${summary.ltvCacRatio || 'N/A'}:1\n`;
-        csv += `Monthly ARPU,${formatCurrency(summary.monthlyARPU || 0)}\n`;
-        csv += `Runway,${summary.runway || 'N/A'} months\n`;
-        csv += `Current Burn Rate,${(summary.currentBurnRate || 0) > 0 ? formatCurrency(summary.currentBurnRate) : 'Profitable'}\n\n`;
-        
-        // Monthly Data Section
-        csv += 'MONTHLY BREAKDOWN\n';
-        
-        // Dynamic headers based on whether Enterprise tier is enabled
-        const isEnterpriseEnabled = document.getElementById('enableEnterpriseTier')?.checked || false;
-        const enterpriseHeader = isEnterpriseEnabled ? ',Enterprise Users' : '';
-        csv += `Month,Total MAU,Growth Rate,Free Users,Basic Users,Pro Users${enterpriseHeader},Conversion Rate,Monthly Revenue,ARR,Team Costs,Tech Costs,Marketing Costs,Variable Costs,Total Costs,Net Income,Cash Balance\n`;
-        
-        let cashBalance = params.seedInvestment || 0;
-        globalMonthlyData.forEach(row => {
-            cashBalance += (row.netIncome || 0);
-            const monthDisplay = row.isBeta ? `Beta ${row.month}` : row.month;
-            const enterpriseData = isEnterpriseEnabled ? `,${(row.enterpriseUsers || 0).toLocaleString()}` : '';
-            
-            csv += `${monthDisplay},${(row.mau || 0).toLocaleString()},${(((row.realizedGrowthRate !== undefined ? row.realizedGrowthRate : row.growthRate) || 0) * 100).toFixed(1)}%,${(row.freeUsers || 0).toLocaleString()},${(row.basicUsers || 0).toLocaleString()},${(row.proUsers || 0).toLocaleString()}${enterpriseData},${((row.conversionRate || 0) * 100).toFixed(1)}%,${formatCurrency(row.monthlyRevenue || 0)},${formatCurrency(row.arr || 0)},${formatCurrency(row.teamCost || 0)},${formatCurrency(row.techCost || 0)},${formatCurrency(row.marketingCost || 0)},${formatCurrency(row.variableCosts || 0)},${formatCurrency(row.monthlyCosts || 0)},${formatCurrency(row.netIncome || 0)},${formatCurrency(cashBalance)}\n`;
+    
+    // Get dynamic headers from table
+    const tableHeader = document.getElementById('monthlyTableHeader');
+    const headers = Array.from(tableHeader.children).map(th => th.textContent.replace(/"/g, '""'));
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add title and metadata
+    csvContent += '"NutriSnap Financial Forecast Export"\n';
+    csvContent += '"Generated on: ' + new Date().toLocaleDateString() + '"\n';
+    csvContent += '""\n'; // Empty line
+    
+    // Add summary data
+    csvContent += '"EXECUTIVE SUMMARY"\n';
+    csvContent += '"Final MAU","' + (document.getElementById('finalMAU')?.textContent || '') + '"\n';
+    csvContent += '"Final ARR","' + (document.getElementById('finalARR')?.textContent || '') + '"\n';
+    csvContent += '"Break-even Month","' + (document.getElementById('breakEvenMonth')?.textContent || '') + '"\n';
+    csvContent += '"Exit Valuation","' + (document.getElementById('exitValuation')?.textContent || '') + '"\n';
+    csvContent += '"Total Revenue","' + (document.getElementById('totalRevenue')?.textContent || '') + '"\n';
+    csvContent += '"Total Costs","' + (document.getElementById('totalCosts')?.textContent || '') + '"\n';
+    csvContent += '"Net Profit","' + (document.getElementById('netProfit')?.textContent || '') + '"\n';
+    csvContent += '"LTV:CAC Ratio","' + (document.getElementById('ltvCacRatio')?.textContent || '') + '"\n';
+    csvContent += '"Customer LTV","' + (document.getElementById('customerLTV')?.textContent || '') + '"\n';
+    csvContent += '"Monthly ARPU","' + (document.getElementById('monthlyARPU')?.textContent || '') + '"\n';
+    csvContent += '"Customer CAC","' + (document.getElementById('customerCAC')?.textContent || '') + '"\n';
+    csvContent += '"Runway","' + (document.getElementById('runway')?.textContent || '') + '"\n';
+    csvContent += '""\n'; // Empty line
+    
+    // Add monthly data headers
+    csvContent += '"MONTHLY PROJECTIONS"\n';
+    csvContent += '"' + headers.join('","') + '"\n';
+    
+    // Add monthly data rows
+    Array.from(tableBody.children).forEach(row => {
+        const cells = Array.from(row.children).map(cell => {
+            return cell.textContent.replace(/"/g, '""').replace(/,/g, '');
         });
-
-        // Create and download the CSV file
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `nutrisnap-financial-forecast-${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Clean up the object URL
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-        } else {
-            // Fallback for older browsers
-            window.open(`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`);
-        }
-
-        console.log('✅ CSV export completed successfully');
-        
-    } catch (error) {
-        console.error('❌ CSV export error:', error);
-        alert(`Error exporting CSV: ${error.message}. Please check console for details and try again.`);
-    }
+        csvContent += '"' + cells.join('","') + '"\n';
+    });
+    
+    // Create and download file
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `nutrisnap-financial-forecast-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('✅ CSV export completed');
 }
 
 function exportToPDF() {
-    if (!globalMonthlyData || globalMonthlyData.length === 0) {
+    const tableBody = document.getElementById('monthlyTableBody');
+    if (!tableBody || !tableBody.children.length) {
         alert('No data available to export. Please run calculations first.');
         return;
     }
@@ -167,43 +123,47 @@ function exportToPDF() {
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, margin, yPosition);
         yPosition += 20;
         
-        // Get summary data from the displayed results or global data
-        const summary = globalSummaryData || {};
-        const params = summary.parameters || {};
+        // Get summary data from the DOM elements
+        const getText = (id) => document.getElementById(id)?.textContent || 'N/A';
         
         // Executive Summary
         addSection('Executive Summary');
-        addText('Final MAU:', (summary.finalMAU || 0).toLocaleString());
-        addText('Final ARR:', formatCurrency(summary.finalARR || 0));
-        addText('Break-even Month:', summary.breakEvenMonth || 'Not Reached');
-        addText('Total Revenue:', formatCurrency(summary.totalRevenue || 0));
-        addText('Total Costs:', formatCurrency(summary.totalCosts || 0));
-        addText('Net Profit/Loss:', formatCurrency(summary.netProfit || 0));
-        addText('LTV:CAC Ratio:', summary.ltvCacRatio || 'N/A');
-        addText('Exit Valuation:', formatCurrency(summary.exitValuation || 0));
-        addText('Runway:', summary.runway || 'N/A');
+        addText('Final MAU:', getText('finalMAU'));
+        addText('Final ARR:', getText('finalARR'));
+        addText('Break-even Month:', getText('breakEvenMonth'));
+        addText('Exit Valuation:', getText('exitValuation'));
+        addText('Investor Return:', getText('investorReturn'));
+        addText('Total Revenue:', getText('totalRevenue'));
+        addText('Total Costs:', getText('totalCosts'));
+        addText('Net Profit/Loss:', getText('netProfit'));
+        addText('LTV:CAC Ratio:', getText('ltvCacRatio'));
+        addText('Customer LTV:', getText('customerLTV'));
+        addText('Monthly ARPU:', getText('monthlyARPU'));
+        addText('Customer CAC:', getText('customerCAC'));
+        addText('Runway:', getText('runway'));
+        addText('Burn Rate:', getText('burnRate'));
         yPosition += 10;
         
         // Key Parameters
         addSection('Key Parameters');
-        addText('App Price:', formatCurrency(params.appPrice || 0) + '/month');
-        addText('Initial Conversion Rate:', ((params.initialConversion || 0) * 100).toFixed(1) + '%');
-        addText('Year 1 Growth Rate:', ((params.growthRates?.[1] || 0) * 100).toFixed(1) + '%');
-        addText('Free User Churn:', ((params.freeChurnRate || 0) * 100).toFixed(1) + '%');
-        addText('Paid User Churn:', ((params.paidChurnRate || 0) * 100).toFixed(1) + '%');
-        addText('Seed Investment:', formatCurrency(params.seedInvestment || 0));
-        addText('Equity Given:', ((params.equityOffered || 0) * 100).toFixed(1) + '%');
+        addText('App Price:', formatCurrency(globalParams.appPrice || 0) + '/month');
+        addText('Initial Conversion Rate:', ((globalParams.initialConversion || 0) * 100).toFixed(1) + '%');
+        addText('Year 1 Growth Rate:', ((globalParams.growthRates?.[1] || 0) * 100).toFixed(1) + '%');
+        addText('Free User Churn:', ((globalParams.freeChurnRate || 0) * 100).toFixed(1) + '%');
+        addText('Paid User Churn:', ((globalParams.paidChurnRate || 0) * 100).toFixed(1) + '%');
+        addText('Seed Investment:', formatCurrency(globalParams.seedInvestment || 0));
+        addText('Equity Given:', ((globalParams.equityOffered || 0) * 100).toFixed(1) + '%');
         yPosition += 10;
         
         // CAC Breakdown
         addSection('Customer Acquisition Metrics');
-        addText('Customer LTV:', formatCurrency(summary.customerLTV || 0));
-        addText('Customer CAC:', formatCurrency(summary.customerCAC || 0));
-        addText('Monthly ARPU:', formatCurrency(summary.monthlyARPU || 0));
-        addText('Total Marketing Costs:', formatCurrency(summary.totalMarketingCosts || 0));
-        addText('Sales Overhead (20%):', formatCurrency(summary.salesOverhead || 0));
-        addText('Total Users Acquired:', (summary.totalUsersAcquired || 0).toLocaleString());
-        addText('Payback Period:', summary.paybackPeriod || 'N/A');
+        addText('Customer LTV:', formatCurrency(globalSummary.customerLTV || 0));
+        addText('Customer CAC:', formatCurrency(globalSummary.customerCAC || 0));
+        addText('Monthly ARPU:', formatCurrency(globalSummary.monthlyARPU || 0));
+        addText('Total Marketing Costs:', formatCurrency(globalSummary.totalMarketingCosts || 0));
+        addText('Sales Overhead (20%):', formatCurrency(globalSummary.salesOverhead || 0));
+        addText('Total Users Acquired:', (globalSummary.totalUsersAcquired || 0).toLocaleString());
+        addText('Payback Period:', globalSummary.paybackPeriod || 'N/A');
         yPosition += 10;
         
         // Monthly Data Table (if autoTable is available)

@@ -1,0 +1,97 @@
+<context>
+# Overview  
+The Nutrisnap Financial Forecasting Tool is a dynamic web-based application designed to provide accurate and interactive financial projections for the Nutrisnap SaaS business. It addresses the critical need for robust financial planning by moving beyond static, error-prone spreadsheets.
+
+The tool is built for Nutrisnap's leadership, finance teams, and potential investors. It solves the problem of forecasting user growth, revenue, and profitability in a subscription-based model with both free and premium tiers.
+
+The core value lies in its ability to model complex business dynamics—such as user acquisition, multi-tier churn, and free-to-premium conversions—providing a clear, data-driven view of the company's financial future. This enables strategic decision-making, effective resource allocation, and transparent communication with stakeholders.
+
+# Core Features  
+- **Dynamic User Growth Modeling**: Projects Monthly Active Users (MAU) based on configurable acquisition rates, churn, and conversion funnels, reflecting the real-world SaaS cohort lifecycle.
+- **Cohort-Based Revenue Projections**: Forecasts subscription revenue by modeling the flow of users from new acquisition into free and premium tiers, applying distinct retention and conversion metrics to each cohort.
+- **Configurable Assumption Engine**: Allows users to define and tweak all key business drivers, including monthly new users, free user churn (currently 3.6%), premium user churn (starting at 5% and improving to 1.5%), and conversion rates.
+- **Comprehensive Expense Forecasting**: Models both fixed and variable operational costs, including salaries, marketing spend (potentially tied to user acquisition), and infrastructure costs.
+- **Interactive Scenario Planning**: Enables users to create, save, and compare multiple forecast scenarios (e.g., "Baseline," "Aggressive Growth," "Recession Impact") to understand the financial implications of different strategies.
+- **Insightful Dashboards & Visualizations**: Presents key financial and SaaS metrics (e.g., MRR, ARR, MAU, LTV, CAC, Churn Rate) through an intuitive and interactive dashboard with charts and graphs.
+- **Data Management**: Provides functionality to import historical performance data to calibrate the model and export detailed forecast data for reporting and further analysis.
+
+# User Experience  
+- **User Personas**:
+    - **CEO/Founder**: Needs high-level dashboards with key performance indicators (KPIs), long-term (3-5 year) forecast summaries, and the ability to quickly compare strategic scenarios.
+    - **Finance Analyst**: Requires granular control over all assumptions, detailed P&L and cash flow statements, and the ability to export raw data for deep-dive analysis in other tools.
+    - **Investor/Board Member**: Seeks clear, concise, and trustworthy reports, focusing on top-line growth, profitability, and scenario outcomes.
+- **Key User Flows**:
+    1. **Model Setup**: A guided process to input initial conditions (e.g., starting MAU, user breakdown) and baseline assumptions.
+    2. **Forecasting**: Running a projection over a specified time horizon with a single click.
+    3. **Analysis**: Interacting with dashboards to visualize trends, drill down into data, and understand the drivers behind the numbers.
+    4. **Scenario Creation**: Duplicating an existing forecast to create a new scenario, adjusting key variables, and comparing the results side-by-side with the original.
+- **UI/UX Considerations**:
+    - A clean, modern, and intuitive web interface built for clarity.
+    - Interactive controls like sliders and data inputs for easy assumption management.
+    - High-quality, responsive data visualizations are central to the user experience.
+</context>
+<PRD>
+# Technical Architecture  
+- **System Components**:
+    - **Frontend**: A single-page application (SPA) using React (or a framework like Next.js) for a responsive and interactive user experience.
+    - **Backend**: A Node.js server with an Express.js API to handle business logic, calculations, and data persistence.
+    - **Database**: A PostgreSQL database to store scenarios, assumptions, and user data.
+- **Data Models**:
+    - `Scenario`: Contains metadata for a forecast (name, description, timeframe) and holds a collection of its assumptions.
+    - `Assumptions`: A structured object or collection of key-value pairs representing all model inputs (e.g., `free_churn_rate`, `premium_conversion_rate`).
+    - `ForecastOutput`: Stores the timeseries results of a forecast calculation, with monthly breakdowns of all key metrics.
+- **APIs and Integrations**:
+    - A RESTful or GraphQL API will serve as the interface between the frontend and backend.
+    - Future integrations may include connections to accounting software (e.g., QuickBooks) via their APIs to pull actuals or payment processors (e.g., Stripe) for real-time revenue data.
+- **Infrastructure Requirements**:
+    - Hosted on a major cloud provider (e.g., AWS, Heroku, Vercel).
+    - Automated CI/CD pipeline for testing and deployment.
+    - Scalable architecture to handle more complex calculations and a growing number of users.
+
+# Development Roadmap  
+- **MVP Requirements**:
+    1.  Implement the core financial forecasting engine based on the established cohort waterfall logic.
+    2.  Create a simple backend API to run the model with a given set of inputs.
+    3.  Develop a minimal web interface where a user can input all necessary assumptions (e.g., growth, churn, conversion) and view the forecast results in a simple table.
+    4.  The MVP will not have a database; scenarios will be managed in memory for a single session.
+- **Future Enhancements**:
+    - Database integration to save, load, and manage multiple scenarios.
+    - User authentication and authorization to secure models.
+    - Interactive dashboards with charts and graphs for data visualization.
+    - Side-by-side scenario comparison.
+    - Detailed expense modeling with categories and variable costs.
+    - Integration with third-party services to pull in real-time "actuals" for comparison.
+
+# Logical Dependency Chain
+1.  **Core Calculation Engine**: Develop and thoroughly test the standalone forecasting module. This is the foundation and must be perfect.
+2.  **API Layer**: Build the backend API to expose the calculation engine.
+3.  **Basic Frontend**: Construct the simplest possible UI to prove the end-to-end functionality (input assumptions -> get results).
+4.  **Database & Persistence**: Introduce the database to allow saving and management of scenarios.
+5.  **Enhanced Visualization Layer**: Build the interactive dashboards and charts on the frontend.
+6.  **Advanced Features**: Layer on additional features like user accounts, integrations, and detailed reporting.
+
+# Current Known Issues & Challenges
+[This section documents the specific problems in the existing forecasting process that this tool is built to solve. These are the foundational "issues" driving the project.]
+- **Flawed Cohort Logic**: Previous spreadsheet-based models used an incorrect order of operations (e.g., applying user growth before churn), leading to logically impossible outcomes like negative free user counts or premium users exceeding total MAU. This tool's primary mandate is to enforce the correct `Churn -> Growth -> Conversion` waterfall logic.
+- **Inaccurate, Blended Churn Rates**: The old system used a single, inaccurate churn rate for all users. This has been a major source of forecasting error. The new model correctly implements distinct churn rates for Free (3.6%) and Premium (improving from 5% to 1.5%) users, which is a critical requirement.
+- **Static and Opaque Assumptions**: In the current spreadsheet models, it is difficult to change assumptions and see the downstream impact. The process is manual and error-prone. A core feature of this tool must be a dynamic assumption engine where changes are instantly reflected in the forecast.
+- **Inability to Perform Scenario Planning**: Comparing different strategic options (e.g., "Baseline" vs. "Aggressive Growth") is a manual, time-consuming, and error-prone process of duplicating and modifying large spreadsheets. This severely limits strategic analysis.
+
+# Risks and Mitigations  
+- **Risks**:
+    - **Calculation Accuracy**: The model's logic is complex; errors could lead to flawed projections. This is the highest-priority risk, especially given the flawed logic in past models.
+    - **MVP Scope Creep**: The desire for more features could delay the initial, usable version.
+    - **Performance**: Large datasets or long forecast horizons could slow down calculations.
+- **Mitigations**:
+    - **Unit Testing**: Implement extensive unit and integration tests for the calculation engine to ensure its accuracy.
+    - **Strict MVP Adherence**: Ruthlessly prioritize features and stick to the defined MVP scope to deliver value quickly.
+    - **Optimization**: Profile the calculation engine and optimize critical code paths. Consider background jobs for very large calculations post-MVP.
+
+# Appendix  
+- **Core MAU Calculation Logic**: The financial model is built on a precise cohort waterfall model:
+    - **Churn First**: Each month, existing Free and Premium users churn at their respective rates.
+    - **Growth Second**: New users are acquired and added to the Free user pool.
+    - **Conversions Third**: A portion of the remaining Free user pool converts to the Premium tier.
+    - **Formula**: `MAU_next = (MAU_current - ChurnedUsers) + NewUsers`.
+    - **Integrity**: This ensures logical consistency, preventing scenarios like negative user pools or premium users exceeding total MAU.
+</PRD> 
