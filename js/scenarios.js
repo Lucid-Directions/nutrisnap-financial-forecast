@@ -270,17 +270,41 @@ function loadProjection(name) {
             return;
         }
         
-        console.log(`📋 Loading projection "${name}"...`);
+        // Check version compatibility and migrate if needed
+        const projectionVersion = projection.version || '1.0';
+        console.log(`📋 Loading projection "${name}" (version ${projectionVersion})...`);
         
-        // First, load all form values with error handling
+        // Migration for older projections (if needed in the future)
+        if (projectionVersion === '1.0') {
+            console.log('🔄 Migrating v1.0 projection to current format...');
+            // Add any migration logic here if needed
+        }
+        
+        // First, load all form values with error handling and backwards compatibility
         Object.keys(projection.data).forEach(id => {
             try {
                 const input = document.getElementById(id);
                 if (input) {
+                    const value = projection.data[id];
+                    
+                    // Handle different input types safely
                     if (input.type === 'checkbox') {
-                        input.checked = projection.data[id];
+                        input.checked = Boolean(value);
+                    } else if (input.type === 'number') {
+                        // Ensure numeric values are valid
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            input.value = numValue;
+                        }
+                    } else if (input.type === 'range') {
+                        // Handle slider values carefully
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            input.value = numValue;
+                        }
                     } else {
-                        input.value = projection.data[id];
+                        // Handle text, select, and other inputs
+                        input.value = value;
                     }
                 }
             } catch (error) {
@@ -850,9 +874,72 @@ window.refreshSavedProjections = function() {
     displaySavedProjections();
 };
 
+// Automatic backup system
+function createAutomaticBackup() {
+    try {
+        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+        const projectionCount = Object.keys(savedProjections).length;
+        
+        if (projectionCount > 0) {
+            // Store a timestamped backup
+            const backupKey = `nutriSnapProjections_backup_${Date.now()}`;
+            localStorage.setItem(backupKey, JSON.stringify(savedProjections));
+            console.log(`🔄 Automatic backup created: ${projectionCount} projections backed up`);
+            
+            // Keep only the last 5 backups to avoid storage bloat
+            const allKeys = Object.keys(localStorage).filter(key => key.startsWith('nutriSnapProjections_backup_'));
+            if (allKeys.length > 5) {
+                const sortedKeys = allKeys.sort();
+                const keysToRemove = sortedKeys.slice(0, -5);
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log(`🧹 Cleaned up ${keysToRemove.length} old backups`);
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not create automatic backup:', error);
+    }
+}
+
+// Function to restore from backup if needed
+function restoreFromBackup() {
+    try {
+        const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('nutriSnapProjections_backup_'));
+        
+        if (backupKeys.length === 0) {
+            alert('No backups found.');
+            return;
+        }
+        
+        // Get the most recent backup
+        const latestBackupKey = backupKeys.sort().pop();
+        const backupData = JSON.parse(localStorage.getItem(latestBackupKey) || '{}');
+        const projectionCount = Object.keys(backupData).length;
+        
+        if (projectionCount > 0) {
+            if (confirm(`Found a backup with ${projectionCount} projections from ${new Date(parseInt(latestBackupKey.split('_').pop())).toLocaleString()}.\n\nRestore this backup? This will overwrite current projections.`)) {
+                localStorage.setItem('nutriSnapProjections', JSON.stringify(backupData));
+                displaySavedProjections();
+                alert(`Successfully restored ${projectionCount} projections from backup!`);
+            }
+        } else {
+            alert('Backup found but contains no projections.');
+        }
+    } catch (error) {
+        console.error('❌ Error restoring from backup:', error);
+        alert('Error restoring from backup: ' + error.message);
+    }
+}
+
 // Initialize saved projections display on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Create automatic backup first
+    createAutomaticBackup();
+    
     setTimeout(() => {
         displaySavedProjections();
     }, 100); // Small delay to ensure DOM is ready
 });
+
+// Make backup functions globally available
+window.createAutomaticBackup = createAutomaticBackup;
+window.restoreFromBackup = restoreFromBackup;

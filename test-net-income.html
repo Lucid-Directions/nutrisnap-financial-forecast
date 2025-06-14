@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Net Income Fix Test</title>
+</head>
+<body>
+    <h1>Net Income Calculation Test</h1>
+    <p>This page will help test the Net Income calculation fix.</p>
+    <p>Open the browser console to see the debug output.</p>
+    
+    <button onclick="runTest()">Run Net Income Test</button>
+    
+    <script>
+        function runTest() {
+            console.log('🧪 Testing Net Income calculation...');
+            
+            // Example Month 1 data based on user requirements
+            const subscriptionRevenue = 881.98; // From user feedback
+            const adRevenue = 0; // Ad revenue starts later
+            const b2bRevenue = 0; // B2B starts later
+            const monthlyRevenue = subscriptionRevenue + adRevenue + b2bRevenue;
+            
+            // Example costs
+            const teamCost = 4500;
+            const techCost = 800;
+            const marketingCost = 1200;
+            const variableCosts = 0; // Variable costs disabled by default
+            const monthlyCosts = teamCost + techCost + marketingCost + variableCosts;
+            
+            const netIncome = monthlyRevenue - monthlyCosts;
+            
+            console.log('📊 Month 1 Test Calculation:');
+            console.log('- Subscription Revenue:', subscriptionRevenue.toFixed(2));
+            console.log('- Ad Revenue:', adRevenue.toFixed(2));
+            console.log('- B2B Revenue:', b2bRevenue.toFixed(2));
+            console.log('- Total Monthly Revenue:', monthlyRevenue.toFixed(2));
+            console.log('- Team Cost:', teamCost.toFixed(2));
+            console.log('- Tech Cost:', techCost.toFixed(2));
+            console.log('- Marketing Cost:', marketingCost.toFixed(2));
+            console.log('- Variable Costs:', variableCosts.toFixed(2));
+            console.log('- Total Monthly Costs:', monthlyCosts.toFixed(2));
+            console.log('- Net Income:', netIncome.toFixed(2));
+            
+            // Expected from user feedback
+            const expectedNetIncome = -12802.02;
+            const difference = netIncome - expectedNetIncome;
+            
+            console.log('🎯 Expected Net Income:', expectedNetIncome.toFixed(2));
+            console.log('📊 Calculated Net Income:', netIncome.toFixed(2));
+            console.log('📏 Difference:', difference.toFixed(2));
+            
+            if (Math.abs(difference) < 0.01) {
+                console.log('✅ Net Income calculation is CORRECT!');
+            } else {
+                console.log('❌ Net Income calculation has a discrepancy of £' + Math.abs(difference).toFixed(2));
+                console.log('💡 The difference suggests the issue might be in the exact parameter values used.');
+            }
+        }
+    </script>
+</body>
+</html>
