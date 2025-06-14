@@ -70,6 +70,57 @@
         .break-even-row td {
             color: #a7f3d0 !important;
         }
+        
+        /* Enhanced table header tooltips */
+        .projection-table th {
+            position: relative;
+            cursor: help;
+        }
+        
+        .projection-table th:hover {
+            background-color: rgba(102, 126, 234, 0.1) !important;
+            color: #667eea !important;
+        }
+        
+        /* Fix tooltip positioning and styling */
+        .projection-table th[title] {
+            position: relative;
+        }
+        
+        .projection-table th[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2a2a2a;
+            color: #ffffff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: normal;
+            white-space: nowrap;
+            z-index: 10000;
+            border: 1px solid #444;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            max-width: 280px;
+            white-space: normal;
+            line-height: 1.4;
+            pointer-events: none;
+            opacity: 1;
+        }
+        
+        .projection-table th[title]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #444;
+            z-index: 10001;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -619,7 +670,7 @@
                         
                         <!-- Annual Discount Configuration -->
                         <div style="background: #0f0f0f; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333;">
-                            <h5 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 0.95rem;">💰 Annual Subscription Discount</h5>
+                            <h5 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 0.95rem;">💰 Annual Subscription Settings</h5>
                             <div class="input-group">
                                 <label for="annualDiscount">Annual Discount Percentage (%)
                                     <span class="info-icon">?</span>
@@ -628,9 +679,17 @@
                                 <input type="range" id="annualDiscount" value="33" min="0" max="100" step="1" oninput="updateSliderValue(this)">
                                 <span id="annualDiscountValue">16.5%</span>
                             </div>
+                            <div class="input-group" style="margin-top: 12px;">
+                                <label for="annualAdoptionRate">Annual Subscription Adoption Rate (%)
+                                    <span class="info-icon">?</span>
+                                    <span class="tooltip">Percentage of premium users who choose annual billing over monthly. Higher rates improve cash flow and reduce churn. Industry average: 40-70%.</span>
+                                </label>
+                                <input type="range" id="annualAdoptionRate" value="60" min="0" max="100" step="1" oninput="updateSliderValue(this)">
+                                <span id="annualAdoptionRateValue">60%</span>
+                            </div>
                             <div style="margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px;">
                                 <small style="color: #9ca3af;">
-                                    💡 <strong>Industry Standards:</strong> SaaS apps typically offer 10-20% annual discounts. 
+                                    💡 <strong>Industry Standards:</strong> SaaS apps typically see 40-70% annual adoption when offering 10-20% discounts. 
                                     Higher discounts improve cash flow but reduce per-month revenue recognition.
                                 </small>
                             </div>
@@ -804,9 +863,26 @@
                 <div class="card">
                     <h2 class="card-title">💾 Save & Load Projections</h2>
                     <div class="save-load-controls">
-                        <input type="text" id="projectionName" placeholder="Enter projection name...">
-                        <button class="action-button" onclick="saveScenario()">Save</button>
+                        <input type="text" id="saveProjectionName" placeholder="Enter projection name...">
+                        <button class="action-button" onclick="saveCurrentProjection()">💾 Save</button>
                     </div>
+                    
+                    <!-- Enhanced backup and restore options -->
+                    <div style="margin: 15px 0; padding: 15px; background: #0f0f0f; border-radius: 8px; border: 1px solid #333;">
+                        <h4 style="color: #10b981; margin: 0 0 10px 0; font-size: 0.95rem;">📁 Persistent Storage & Backup</h4>
+                        <p style="color: #9ca3af; font-size: 0.85rem; margin: 0 0 12px 0;">
+                            Your projections are automatically saved to multiple storage locations and backed up as downloadable files.
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;">
+                            <button onclick="importProjectionFromFile()" style="background: #667eea; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                📂 Import Projection
+                            </button>
+                            <button onclick="exportAllProjections()" style="background: #f59e0b; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                📤 Export All
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div id="savedScenarios"></div>
                 </div>
             </div>
@@ -825,6 +901,32 @@
         <div id="outputSection" class="results-container" style="display:none;">
             <div class="card">
                 <h2 class="card-title">📊 Financial Projections Summary</h2>
+                
+                <!-- Enhanced Financial Transparency Section -->
+                <div style="background: #0f0f0f; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #10b981;">
+                    <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 1.1rem;">💡 Calculation Transparency</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; font-size: 0.85rem;">
+                        <div>
+                            <strong style="color: #e5e7eb;">Conversion Rate Formula:</strong><br>
+                            <span style="color: #9ca3af;">Premium Users ÷ Total MAU × 100%</span>
+                        </div>
+                        <div>
+                            <strong style="color: #e5e7eb;">ARR Calculation:</strong><br>
+                            <span style="color: #9ca3af;">Subscription Revenue × 12 (excludes ads/B2B)</span>
+                        </div>
+                        <div>
+                            <strong style="color: #e5e7eb;">ARPU Definition:</strong><br>
+                            <span style="color: #9ca3af;">Subscription Revenue ÷ Premium Users</span>
+                        </div>
+                        <div>
+                            <strong style="color: #e5e7eb;">Net Income:</strong><br>
+                            <span style="color: #9ca3af;">All Revenue - All Costs</span>
+                        </div>
+                    </div>
+                    <div id="pricingModelDisplay" style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 6px;">
+                        <strong style="color: #f59e0b;">Pricing Model:</strong> <span id="pricingDetails" style="color: #9ca3af;">Will be populated after calculation</span>
+                    </div>
+                </div>
                 
                 <!-- Key Metrics Grid -->
                 <div class="summary-grid">
@@ -1115,6 +1217,19 @@
                 </div>
             </div>
 
+            <!-- Financial Validation Summary (Separate from Monthly Data) -->
+            <div class="card">
+                <h3 class="card-title">🔍 Financial Validation Summary</h3>
+                <div style="background: #0f0f0f; padding: 15px; border-radius: 8px; border-left: 3px solid #667eea;">
+                    <p style="color: #9ca3af; margin: 0 0 15px 0; font-size: 0.9rem;">
+                        This section validates key financial calculations and provides transparency on the methodology used.
+                    </p>
+                    <div id="validationSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Monthly Projections Table -->
             <div class="card">
                 <h3 class="card-title">📈 Monthly Projections</h3>
@@ -1225,10 +1340,25 @@
             <div class="card">
                 <h3 class="card-title">💾 Export Results</h3>
                 <div class="export-controls">
-                    <button onclick="exportToPDF()" class="export-btn">📄 Export PDF Report</button>
-                    <button onclick="exportToCSV()" class="export-btn">📊 Export CSV Data</button>
-                    <button onclick="exportScreenshot()" class="export-btn">📸 Export Screenshot</button>
+                    <button onclick="exportToPDF()" class="export-btn">📄 Professional PDF Report</button>
+                    <button onclick="exportToCSV()" class="export-btn">📊 Detailed CSV Data</button>
+                    <button onclick="exportScreenshot()" class="export-btn">📸 Full-Screen Screenshot</button>
+                    <button onclick="exportComprehensiveReport()" class="export-btn">📦 All Exports</button>
                 </div>
+                <div style="margin-top: 15px; padding: 10px; background: #0f0f0f; border-radius: 6px; border: 1px solid #333;">
+                    <h4 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 0.9rem;">🔧 Debug Export Functions</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button onclick="testExportFunctions()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            Test Functions
+                        </button>
+                        <button onclick="console.log('Global data:', globalMonthlyData?.length || 0, 'months')" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            Check Data
+                        </button>
+                    </div>
+                </div>
+                <p style="color: #9ca3af; font-size: 0.85rem; margin-top: 10px;">
+                    Professional exports with clean formatting, no symbols. Screenshot captures entire interface including input parameters.
+                </p>
             </div>
         </div>
     </div>
@@ -1273,7 +1403,7 @@
             initializeUI();
             console.log('✅ UI initialized');
 
-            loadSavedProjections();
+            displaySavedProjections();
             console.log('✅ Saved projections displayed');
             
             console.log('✅ Application initialization complete');

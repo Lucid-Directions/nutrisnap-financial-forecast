@@ -42,39 +42,7 @@ function updateAnnualCostDisplays() {
 }
 window.updateAnnualCostDisplays = updateAnnualCostDisplays;
 
-// Placeholder for saving/loading functionality
-function displaySavedProjections() {
-    const container = document.getElementById('savedProjectionsList');
-    const noSavedEl = document.getElementById('noSavedProjections');
-    
-    if (!container) return;
-    
-    const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
-    const projectionNames = Object.keys(savedProjections);
-    
-    if (projectionNames.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-style: italic;" id="noSavedProjections">No saved projections yet.</div>';
-        return;
-    }
-    
-    container.innerHTML = projectionNames.map(name => {
-        const projection = savedProjections[name];
-        return `
-            <div class="saved-projection-item">
-                <div>
-                    <div class="saved-projection-name">${name}</div>
-                    <div class="saved-projection-details">${projection.description}</div>
-                </div>
-                <div class="saved-projection-actions">
-                    <button class="saved-projection-btn load-btn" onclick="loadProjection('${name}')">Load</button>
-                    <button class="saved-projection-btn rename-btn" onclick="renameProjection('${name}')">Rename</button>
-                    <button class="saved-projection-btn delete-btn" onclick="deleteProjection('${name}')">Delete</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-window.displaySavedProjections = displaySavedProjections;
+// Note: displaySavedProjections function is implemented in scenarios.js
 
 // Cost management tab functions (placeholders)
 function switchCostTab(tabName) {

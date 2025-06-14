@@ -204,7 +204,7 @@ function loadScenario(scenario) {
     }, 100);
 }
 
-// Save/Load Projection Functionality
+// Enhanced Save/Load Projection Functionality with Persistent Storage
 function saveCurrentProjection() {
     try {
         const nameInput = document.getElementById('saveProjectionName');
@@ -228,21 +228,31 @@ function saveCurrentProjection() {
             }
         });
         
-        // Get saved projections from localStorage
-        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
-        
-        // Save current projection
-        savedProjections[projectionName] = {
+        // Create comprehensive projection data
+        const projectionData = {
+            name: projectionName,
             data: formData,
             timestamp: new Date().toISOString(),
-            description: `Saved ${new Date().toLocaleDateString()}`
+            description: `Saved ${new Date().toLocaleDateString()}`,
+            version: '2.0',
+            metadata: {
+                userAgent: navigator.userAgent,
+                savedFrom: window.location.href,
+                projectionPeriod: formData.projectionPeriod || 36,
+                tiersCount: document.querySelectorAll('#dynamicTierContainer .tier-input-group').length
+            }
         };
         
-        localStorage.setItem('nutriSnapProjections', JSON.stringify(savedProjections));
-        nameInput.value = '';
+        // Save to multiple storage methods for persistence
+        saveToLocalStorage(projectionName, projectionData);
+        saveToIndexedDB(projectionName, projectionData);
         
+        // Also create downloadable backup
+        createProjectionBackup(projectionData);
+        
+        nameInput.value = '';
         displaySavedProjections();
-        alert(`Projection "${projectionName}" saved successfully!`);
+        alert(`Projection "${projectionName}" saved successfully!\n\nSaved to multiple storage locations for persistence.\nA backup file has also been created for download.`);
         
     } catch (error) {
         console.error('❌ Error saving projection:', error);
@@ -483,41 +493,339 @@ function saveScenario() {
 function displaySavedProjections() {
     try {
         const container = document.getElementById('savedScenarios');
-        if (!container) return;
-        
-        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
-        const projectionNames = Object.keys(savedProjections);
-        
-        if (projectionNames.length === 0) {
-            container.innerHTML = '<p style="color: #999; font-size: 0.9rem;">No saved projections</p>';
+        if (!container) {
+            console.warn('⚠️ savedScenarios container not found');
             return;
         }
         
-        container.innerHTML = projectionNames.map(name => {
-            const projection = savedProjections[name];
-            const description = projection?.description || 'No description';
+        // Get projections from localStorage (immediate display)
+        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+        const projectionNames = Object.keys(savedProjections);
+        
+        console.log(`📊 Found ${projectionNames.length} saved projections:`, projectionNames);
+        
+        if (projectionNames.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #999; font-style: italic;">
+                    <p style="margin: 0 0 10px 0;">No saved projections yet</p>
+                    <small style="color: #666;">Create your first projection and save it above!</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Sort projections by timestamp (newest first)
+        const sortedProjections = projectionNames
+            .map(name => ({ name, ...savedProjections[name] }))
+            .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+        
+        // Build the HTML
+        let html = `
+            <div style="background: #0f0f0f; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; text-align: center;">
+                <small style="color: #667eea; font-weight: 600;">
+                    📊 ${projectionNames.length} saved projection${projectionNames.length !== 1 ? 's' : ''} available
+                </small>
+            </div>
+        `;
+        
+        html += sortedProjections.map(projection => {
+            const name = projection.name;
+            const description = projection.description || 'No description';
+            const timestamp = projection.timestamp ? new Date(projection.timestamp).toLocaleDateString() : 'Unknown date';
+            const version = projection.version || '1.0';
+            const tiersCount = projection.metadata?.tiersCount || 'Unknown';
+            
             return `
-                <div style="background: #1a1a1a; padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #667eea;">
-                    <div style="display: flex; justify-content: between; align-items: center; gap: 10px;">
-                        <div style="flex: 1;">
-                            <strong style="color: #fff;">${name}</strong><br>
-                            <small style="color: #999;">${description}</small>
+                <div style="background: #1a1a1a; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 3px solid #667eea; transition: all 0.3s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="color: #fff; font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">${name}</div>
+                            <div style="color: #9ca3af; font-size: 0.8rem; margin-bottom: 6px;">${description}</div>
+                            <div style="display: flex; gap: 12px; font-size: 0.75rem; color: #666;">
+                                <span>📅 ${timestamp}</span>
+                                <span>🎯 ${tiersCount} tiers</span>
+                                <span>🔧 v${version}</span>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button onclick="loadProjection('${name}')" style="background: #10b981; color: #fff; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Load</button>
-                            <button onclick="deleteProjection('${name}')" style="background: #ef4444; color: #fff; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Delete</button>
+                        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 80px;">
+                            <button onclick="loadProjection('${name}')" style="background: #10b981; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s ease;">
+                                📂 Load
+                            </button>
+                            <button onclick="exportSingleProjection('${name}')" style="background: #f59e0b; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s ease;">
+                                💾 Export
+                            </button>
+                            <button onclick="deleteProjection('${name}')" style="background: #ef4444; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s ease;">
+                                🗑️ Delete
+                            </button>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
         
+        container.innerHTML = html;
+        console.log('✅ Saved projections displayed successfully');
+        
     } catch (error) {
         console.error('❌ Error displaying saved projections:', error);
         const container = document.getElementById('savedScenarios');
         if (container) {
-            container.innerHTML = '<p style="color: #ef4444; font-size: 0.9rem;">Error loading saved projections. Please check console.</p>';
+            container.innerHTML = `
+                <div style="background: #2a1a1a; border: 1px solid #ef4444; border-radius: 6px; padding: 12px; color: #ef4444;">
+                    <strong>⚠️ Error loading saved projections</strong><br>
+                    <small style="color: #999;">Please check browser console for details.</small>
+                </div>
+            `;
         }
+    }
+}
+
+// Enhanced storage functions
+function saveToLocalStorage(name, data) {
+    try {
+        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+        savedProjections[name] = data;
+        localStorage.setItem('nutriSnapProjections', JSON.stringify(savedProjections));
+        console.log(`✅ Saved "${name}" to localStorage`);
+    } catch (error) {
+        console.error('❌ Error saving to localStorage:', error);
+    }
+}
+
+function saveToIndexedDB(name, data) {
+    try {
+        // Open IndexedDB
+        const request = indexedDB.open('NutriSnapProjections', 1);
+        
+        request.onerror = () => {
+            console.warn('⚠️ IndexedDB not available, using localStorage only');
+        };
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('projections')) {
+                db.createObjectStore('projections', { keyPath: 'name' });
+            }
+        };
+        
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['projections'], 'readwrite');
+            const store = transaction.objectStore('projections');
+            
+            store.put(data);
+            
+            transaction.oncomplete = () => {
+                console.log(`✅ Saved "${name}" to IndexedDB`);
+            };
+            
+            transaction.onerror = (error) => {
+                console.warn('⚠️ Error saving to IndexedDB:', error);
+            };
+        };
+    } catch (error) {
+        console.warn('⚠️ IndexedDB not supported:', error);
+    }
+}
+
+function createProjectionBackup(data) {
+    try {
+        // Create a comprehensive backup file
+        const backupData = {
+            exportType: 'NutriSnap Financial Projection Backup',
+            exportDate: new Date().toISOString(),
+            version: '2.0',
+            projection: data,
+            instructions: {
+                howToRestore: 'Use the "Import Projection" feature in NutriSnap Financial Forecast',
+                compatibility: 'Compatible with NutriSnap Financial Forecast v2.0+',
+                format: 'JSON'
+            }
+        };
+        
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `nutrisnap-projection-${data.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+        
+        // Automatically download the backup
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log(`📥 Created backup file for projection "${data.name}"`);
+    } catch (error) {
+        console.warn('⚠️ Error creating backup file:', error);
+    }
+}
+
+function loadFromIndexedDB(name, callback) {
+    try {
+        const request = indexedDB.open('NutriSnapProjections', 1);
+        
+        request.onerror = () => {
+            callback(null);
+        };
+        
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['projections'], 'readonly');
+            const store = transaction.objectStore('projections');
+            const getRequest = store.get(name);
+            
+            getRequest.onsuccess = () => {
+                callback(getRequest.result);
+            };
+            
+            getRequest.onerror = () => {
+                callback(null);
+            };
+        };
+    } catch (error) {
+        callback(null);
+    }
+}
+
+function getAllProjectionsFromIndexedDB(callback) {
+    try {
+        const request = indexedDB.open('NutriSnapProjections', 1);
+        
+        request.onerror = () => {
+            callback({});
+        };
+        
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['projections'], 'readonly');
+            const store = transaction.objectStore('projections');
+            const getAllRequest = store.getAll();
+            
+            getAllRequest.onsuccess = () => {
+                const projections = {};
+                getAllRequest.result.forEach(proj => {
+                    projections[proj.name] = proj;
+                });
+                callback(projections);
+            };
+            
+            getAllRequest.onerror = () => {
+                callback({});
+            };
+        };
+    } catch (error) {
+        callback({});
+    }
+}
+
+function importProjectionFromFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importData = JSON.parse(e.target.result);
+                
+                // Validate import format
+                if (!importData.projection || !importData.projection.name || !importData.projection.data) {
+                    alert('Invalid backup file format. Please select a valid NutriSnap projection backup file.');
+                    return;
+                }
+                
+                const projectionName = importData.projection.name;
+                
+                // Check if projection already exists
+                const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+                if (savedProjections[projectionName]) {
+                    if (!confirm(`A projection named "${projectionName}" already exists. Do you want to overwrite it?`)) {
+                        return;
+                    }
+                }
+                
+                // Save imported projection
+                saveToLocalStorage(projectionName, importData.projection);
+                saveToIndexedDB(projectionName, importData.projection);
+                
+                displaySavedProjections();
+                alert(`Projection "${projectionName}" imported successfully!\n\nYou can now load it from your saved projections.`);
+                
+            } catch (error) {
+                console.error('❌ Error importing projection:', error);
+                alert('Error importing projection file. Please check that the file is a valid NutriSnap projection backup.');
+            }
+        };
+        
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
+function exportSingleProjection(name) {
+    try {
+        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+        const projection = savedProjections[name];
+        
+        if (!projection) {
+            alert(`Projection "${name}" not found.`);
+            return;
+        }
+        
+        createProjectionBackup(projection);
+        console.log(`📥 Exported single projection: ${name}`);
+        
+    } catch (error) {
+        console.error('❌ Error exporting single projection:', error);
+        alert(`Error exporting projection "${name}". Please try again.`);
+    }
+}
+
+function exportAllProjections() {
+    try {
+        const savedProjections = JSON.parse(localStorage.getItem('nutriSnapProjections') || '{}');
+        
+        if (Object.keys(savedProjections).length === 0) {
+            alert('No saved projections to export.');
+            return;
+        }
+        
+        const exportData = {
+            exportType: 'NutriSnap Financial Projections Backup Collection',
+            exportDate: new Date().toISOString(),
+            version: '2.0',
+            totalProjections: Object.keys(savedProjections).length,
+            projections: savedProjections,
+            instructions: {
+                howToRestore: 'Use the "Import All Projections" feature in NutriSnap Financial Forecast',
+                compatibility: 'Compatible with NutriSnap Financial Forecast v2.0+',
+                format: 'JSON Collection'
+            }
+        };
+        
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `nutrisnap-all-projections-${new Date().toISOString().split('T')[0]}.json`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log(`📥 Exported ${Object.keys(savedProjections).length} projections`);
+        alert(`Successfully exported ${Object.keys(savedProjections).length} projections to a backup file.`);
+        
+    } catch (error) {
+        console.error('❌ Error exporting all projections:', error);
+        alert('Error exporting projections. Please try again.');
     }
 }
 
@@ -529,6 +837,18 @@ window.loadProjection = loadProjection;
 window.deleteProjection = deleteProjection;
 window.renameProjection = renameProjection;
 window.loadScenario = loadScenario;
+window.importProjectionFromFile = importProjectionFromFile;
+window.exportAllProjections = exportAllProjections;
+window.exportSingleProjection = exportSingleProjection;
+window.saveToLocalStorage = saveToLocalStorage;
+window.saveToIndexedDB = saveToIndexedDB;
+window.createProjectionBackup = createProjectionBackup;
+
+// Debug function to force refresh saved projections list
+window.refreshSavedProjections = function() {
+    console.log('🔄 Manually refreshing saved projections...');
+    displaySavedProjections();
+};
 
 // Initialize saved projections display on page load
 document.addEventListener('DOMContentLoaded', function() {

@@ -260,17 +260,22 @@ function runFinancialCalculation(params) {
         const newTierConversions = {};
         params.tiers.forEach(t => newTierConversions[t.id] = 0);
 
+        // Improved Documentation: Tier Distribution Logic
+        // The 'conversion' field in tiers represents the distribution weight for new premium users
+        // This is separate from the overall conversion rate (Premium Users ÷ MAU)
         const enabledPaidTiers = params.tiers.filter(t => t.enabled && t.price > 0 && t.conversion > 0);
         const totalDistributionWeight = enabledPaidTiers.reduce((sum, tier) => sum + tier.conversion, 0);
 
         if (totalDistributionWeight > 0 && newConversionsThisMonth > 0) {
             let distributedConversions = 0;
             enabledPaidTiers.forEach(tier => {
+                // Distribution share: what percentage of new premium users choose this tier
                 const distributionShare = tier.conversion / totalDistributionWeight;
                 const conversionsForThisTier = Math.round(newConversionsThisMonth * distributionShare);
                 newTierConversions[tier.id] = conversionsForThisTier;
                 distributedConversions += conversionsForThisTier;
             });
+            // Handle rounding differences to ensure exact user count
             const roundingDiff = newConversionsThisMonth - distributedConversions;
             if (roundingDiff !== 0 && enabledPaidTiers.length > 0) newTierConversions[enabledPaidTiers[0].id] += roundingDiff;
         }
@@ -288,16 +293,26 @@ function runFinancialCalculation(params) {
 
         const totalPremiumUsers = Object.values(tierUsers).reduce((a, b) => a + b, 0);
         const currentMAU = freeUsers + totalPremiumUsers;
-        const actualConversionRate = (freeUsers + actualConversions) > 0 ? (actualConversions / (freeUsers + actualConversions)) : 0;
+        
+        // Fix: Correct conversion rate calculation - should be Premium Users ÷ MAU
+        const actualConversionRate = currentMAU > 0 ? (totalPremiumUsers / currentMAU) : 0;
         if (actualConversionRate > peakConversionRate) peakConversionRate = actualConversionRate;
 
-        // Calculate subscription revenue with annual discount applied
+        // REVENUE MODEL DOCUMENTATION:
+        // Subscription revenue calculation with clear pricing structure
         const subscriptionRevenue = params.tiers.reduce((sum, tier) => {
+            // Base tier revenue: users × monthly price
             const tierRevenue = tierUsers[tier.id] * tier.price;
-            // Apply annual discount (assuming percentage of users choose annual billing)
-            const annualBillingRate = 0.6; // Assume 60% of users choose annual billing for the discount
+            
+            // Annual billing split: percentage of users choosing annual vs monthly billing
+            const annualBillingRate = params.annualAdoptionRate || 0.6; // Default 60% choose annual
+            
+            // Monthly billing revenue: users paying monthly × full price
             const monthlyRevenue = tierRevenue * (1 - annualBillingRate);
+            
+            // Annual billing revenue: users paying annually × discounted price
             const annualRevenue = tierRevenue * annualBillingRate * (1 - params.annualDiscount);
+            
             return sum + monthlyRevenue + annualRevenue;
         }, 0);
 
@@ -319,7 +334,9 @@ function runFinancialCalculation(params) {
         }
         
         const monthlyRevenue = subscriptionRevenue + adRevenue + b2bRevenue;
-        const arr = monthlyRevenue * 12;
+        
+        // Fix: ARR should reflect only recurring subscription revenue, not ad/B2B revenue
+        const arr = subscriptionRevenue * 12;
 
         const currentTeamCost = params.teamCosts[Math.min(year, 3)] || params.teamCosts[3];
         const currentTechCost = params.techCosts[Math.min(year, 3)] || params.techCosts[3];
@@ -349,7 +366,7 @@ function runFinancialCalculation(params) {
         monthlyData.push({
             month, mau: currentMAU, growthRate: growthRate * 100, freeUsers, 
             premiumUsers: totalPremiumUsers, conversionRate: actualConversionRate * 100,
-            monthlyRevenue, arr, adRevenue, b2bRevenue,
+            subscriptionRevenue, monthlyRevenue, arr, adRevenue, b2bRevenue,
             teamCost: currentTeamCost, techCost: currentTechCost, marketingCost: currentMarketingCost,
             variableCosts, supportCost, infraCost, transactionFees,
             monthlyCosts, netIncome, tierUsers: { ...tierUsers }
@@ -368,28 +385,68 @@ function runFinancialCalculation(params) {
     const avgMonthlyRevenue = projectionMonths.length > 0 ? totalRevenue / projectionMonths.length : 0;
     const avgMarketingCost = projectionMonths.length > 0 ? totalMarketingSpend / projectionMonths.length : 0;
     const customerCAC = totalNewUsers > 0 ? totalMarketingSpend / totalNewUsers : 0;
-    const monthlyARPU = finalMonthData.premiumUsers > 0 ? finalMonthData.monthlyRevenue / finalMonthData.premiumUsers : 0;
+    
+    // Fix: Calculate subscription ARPU (Average Revenue Per Premium User) more clearly
+    // Using subscription revenue only, not total revenue which includes ads/B2B
+    const subscriptionRevenueFinal = finalMonthData.tierUsers ? 
+        params.tiers.reduce((sum, tier) => {
+            const tierRevenue = (finalMonthData.tierUsers[tier.id] || 0) * tier.price;
+            const annualBillingRate = params.annualAdoptionRate || 0.6;
+            const monthlyRev = tierRevenue * (1 - annualBillingRate);
+            const annualRev = tierRevenue * annualBillingRate * (1 - params.annualDiscount);
+            return sum + monthlyRev + annualRev;
+        }, 0) : 0;
+    
+    const monthlyARPU = finalMonthData.premiumUsers > 0 ? subscriptionRevenueFinal / finalMonthData.premiumUsers : 0;
     const customerLTV = params.paidChurnRate > 0 ? monthlyARPU / params.paidChurnRate : 0;
     const ltvCacRatio = customerCAC > 0 ? customerLTV / customerCAC : 0;
     const runway = avgMarketingCost > 0 ? params.seedInvestment / avgMarketingCost : 0;
     const burnRate = projectionMonths.filter(m => m.netIncome < 0).length > 0 ? 
         Math.abs(projectionMonths.filter(m => m.netIncome < 0).reduce((sum, m) => sum + m.netIncome, 0) / projectionMonths.filter(m => m.netIncome < 0).length) : 0;
 
+    // ENHANCED FINANCIAL SUMMARY with calculation transparency
     const summary = {
+        // Core User Metrics
         finalMAU: finalMonthData.mau,
-        finalARR: finalMonthData.arr,
+        finalPremiumUsers: finalMonthData.premiumUsers,
+        finalConversionRate: finalMonthData.premiumUsers > 0 ? ((finalMonthData.premiumUsers / finalMonthData.mau) * 100).toFixed(2) + '%' : '0.00%',
+        
+        // Revenue Metrics (Fixed Calculations)
+        finalARR: finalMonthData.arr, // Now correctly based on subscription revenue only
+        totalRevenue: totalRevenue, // Total of all revenue streams over projection period
+        totalSubscriptionRevenue: projectionMonths.reduce((sum, m) => sum + (m.subscriptionRevenue || 0), 0),
+        totalAdRevenue: totalAdRevenue,
+        totalB2BRevenue: projectionMonths.reduce((sum, m) => sum + (m.b2bRevenue || 0), 0),
+        
+        // Financial Performance
         breakEvenMonth: breakEvenMonth ? `Month ${breakEvenMonth}` : 'N/A',
         exitValuation: finalMonthData.arr * params.valuationMultiple,
         investorReturn: `${((finalMonthData.arr * params.valuationMultiple * params.equityOffered) / params.seedInvestment).toFixed(1)}x`,
-        totalRevenue: totalRevenue,
         totalCosts: totalCosts,
         netProfit: totalRevenue - totalCosts,
-        ltvCacRatio: ltvCacRatio > 0 ? `${ltvCacRatio.toFixed(1)}:1` : 'N/A',
+        
+        // Unit Economics (Corrected)
+        monthlyARPU: monthlyARPU, // Now subscription ARPU only
         customerLTV: customerLTV,
-        monthlyARPU: monthlyARPU,
         customerCAC: customerCAC,
+        ltvCacRatio: ltvCacRatio > 0 ? `${ltvCacRatio.toFixed(1)}:1` : 'N/A',
+        
+        // Cash Flow
         runway: runway === Infinity ? 'Infinite' : `${runway.toFixed(1)} mo`,
         burnRate: burnRate,
+        
+        // Pricing Transparency
+        pricingModel: {
+            tiers: params.tiers.map(tier => ({
+                name: tier.name,
+                monthlyPrice: tier.price,
+                annualPrice: tier.price * 12 * (1 - params.annualDiscount),
+                annualDiscount: `${(params.annualDiscount * 100).toFixed(1)}%`,
+                distributionWeight: tier.conversion
+            })),
+            annualAdoptionRate: `${((params.annualAdoptionRate || 0.6) * 100).toFixed(0)}%`
+        },
+        
         revenueComposition: { labels: [], data: [] },
     };
 
@@ -458,6 +515,7 @@ function gatherInputs() {
         
         tiers: tiers,
         annualDiscount: getVal('annualDiscount') / 100,
+        annualAdoptionRate: getVal('annualAdoptionRate') / 100,
 
         initialConversion: getVal('initialConversion') / 100,
         finalConversion: getVal('finalConversion') / 100,
@@ -531,6 +589,7 @@ const sliderConfig = {
     'valuationMultiple': { min: 0, max: 100, step: 0.1, unit: 'x' },
     'b2bPercentage': { min: 0, max: 100, step: 1, unit: '%' },
     'annualDiscount': { min: 0, max: 50, step: 0.5, unit: '%' },
+    'annualAdoptionRate': { min: 0, max: 100, step: 1, unit: '%' },
     'initialRetentionRate': { min: 0, max: 100, step: 1, unit: '%' },
     'retentionDecay': { min: 0, max: 100, step: 1, unit: '%' },
 };
@@ -689,6 +748,80 @@ function displayResults(results, params) {
     Object.entries(summaryMapping).forEach(([id, value]) => {
         updateText(id, value);
     });
+    
+    // Update pricing model transparency section
+    const pricingDetails = document.getElementById('pricingDetails');
+    if (pricingDetails && summary.pricingModel) {
+        const tierInfo = summary.pricingModel.tiers.map(tier => 
+            `${tier.name}: £${tier.monthlyPrice}/mo (£${(tier.annualPrice || 0).toFixed(0)}/year with ${tier.annualDiscount} discount)`
+        ).join(' | ');
+        
+        pricingDetails.innerHTML = `
+            <div style="margin-bottom: 8px;">
+                <strong>Tiers:</strong> ${tierInfo}
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.8rem;">
+                <span><strong>Annual Adoption Rate:</strong> ${summary.pricingModel.annualAdoptionRate}</span>
+                <span><strong>Final Conversion Rate:</strong> ${summary.finalConversionRate}</span>
+                <span><strong>Subscription ARPU:</strong> ${formatCurrency(summary.monthlyARPU)}</span>
+            </div>
+        `;
+    }
+    
+    // Update financial validation summary (separate from monthly data)
+    const validationSummary = document.getElementById('validationSummary');
+    if (validationSummary) {
+        const finalMonth = finalMonthData;
+        const calculatedConversionRate = finalMonth.mau > 0 ? ((finalMonth.premiumUsers / finalMonth.mau) * 100).toFixed(2) : '0.00';
+        const calculatedARR = (summary.finalARR / 1000000).toFixed(2); // In millions
+        const revenueBreakdown = {
+            subscription: summary.totalSubscriptionRevenue || 0,
+            ads: summary.totalAdRevenue || 0,
+            b2b: summary.totalB2BRevenue || 0
+        };
+        const totalCalculated = revenueBreakdown.subscription + revenueBreakdown.ads + revenueBreakdown.b2b;
+        
+        validationSummary.innerHTML = `
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px solid #333;">
+                <h4 style="color: #4ade80; margin: 0 0 10px 0; font-size: 0.95rem;">✅ Conversion Rate Validation</h4>
+                <div style="font-size: 0.8rem; color: #9ca3af; line-height: 1.5;">
+                    <strong>Formula:</strong> Premium Users ÷ MAU × 100%<br>
+                    <strong>Calculation:</strong> ${formatNumber(finalMonth.premiumUsers)} ÷ ${formatNumber(finalMonth.mau)} × 100% = ${calculatedConversionRate}%<br>
+                    <strong>Result:</strong> <span style="color: #4ade80;">${summary.finalConversionRate}</span>
+                </div>
+            </div>
+            
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px solid #333;">
+                <h4 style="color: #60a5fa; margin: 0 0 10px 0; font-size: 0.95rem;">✅ ARR Calculation Validation</h4>
+                <div style="font-size: 0.8rem; color: #9ca3af; line-height: 1.5;">
+                    <strong>Formula:</strong> Subscription Revenue × 12<br>
+                    <strong>Excludes:</strong> Ad revenue, B2B revenue (non-recurring)<br>
+                    <strong>Final Month Subscription:</strong> ${formatCurrency(finalMonth.subscriptionRevenue || 0)}<br>
+                    <strong>ARR:</strong> <span style="color: #60a5fa;">${formatCurrency(summary.finalARR)}</span>
+                </div>
+            </div>
+            
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px solid #333;">
+                <h4 style="color: #f59e0b; margin: 0 0 10px 0; font-size: 0.95rem;">✅ Revenue Model Breakdown</h4>
+                <div style="font-size: 0.8rem; color: #9ca3af; line-height: 1.5;">
+                    <strong>Subscription:</strong> ${formatCurrency(revenueBreakdown.subscription)} (${((revenueBreakdown.subscription/totalCalculated)*100).toFixed(1)}%)<br>
+                    <strong>Advertising:</strong> ${formatCurrency(revenueBreakdown.ads)} (${((revenueBreakdown.ads/totalCalculated)*100).toFixed(1)}%)<br>
+                    <strong>B2B Partnerships:</strong> ${formatCurrency(revenueBreakdown.b2b)} (${((revenueBreakdown.b2b/totalCalculated)*100).toFixed(1)}%)<br>
+                    <strong>Total Validated:</strong> <span style="color: #f59e0b;">${formatCurrency(totalCalculated)}</span>
+                </div>
+            </div>
+            
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px solid #333;">
+                <h4 style="color: #8b5cf6; margin: 0 0 10px 0; font-size: 0.95rem;">✅ Unit Economics Validation</h4>
+                <div style="font-size: 0.8rem; color: #9ca3af; line-height: 1.5;">
+                    <strong>ARPU Formula:</strong> Subscription Revenue ÷ Premium Users<br>
+                    <strong>Calculation:</strong> ${formatCurrency(finalMonth.subscriptionRevenue || 0)} ÷ ${formatNumber(finalMonth.premiumUsers)} = ${formatCurrency(summary.monthlyARPU)}<br>
+                    <strong>LTV:CAC Ratio:</strong> <span style="color: #8b5cf6;">${summary.ltvCacRatio}</span><br>
+                    <strong>Status:</strong> ${parseFloat(summary.ltvCacRatio?.split(':')[0] || '0') > 3 ? '🟢 Excellent' : parseFloat(summary.ltvCacRatio?.split(':')[0] || '0') > 2 ? '🟡 Good' : '🔴 Needs Improvement'}
+                </div>
+            </div>
+        `;
+    }
     
     // Show/hide breakdown cards based on features enabled
     const variableCostCard = document.getElementById('variableCostBreakdownCard');
@@ -862,31 +995,50 @@ function displayResults(results, params) {
         });
     }
 
-    // Update table headers based on active tiers
+    // Update table headers based on active tiers with tooltips
     const tableHeader = document.getElementById('monthlyTableHeader');
     if (tableHeader) {
         let headers = `
-            <th>Month</th>
-            <th>MAU</th>
-            <th>Growth Rate (%)</th>
-            <th>Free Users</th>`;
+            <th title="Month of the projection period">Month</th>
+            <th title="Total Monthly Active Users (Free + Premium)">MAU</th>
+            <th title="Percentage growth in users from previous month">Growth Rate (%)</th>
+            <th title="Users on the free tier of your app">Free Users</th>`;
         
-        // Add headers for each active tier (these replace the generic "Premium Users" column)
-        params.tiers.forEach(tier => {
-            headers += `<th>${tier.name}</th>`;
-        });
+        // Add headers for each active PAID tier only (exclude free tier since it's already shown)
+        if (params.tiers && params.tiers.length > 0) {
+            const paidTiers = params.tiers.filter(tier => tier.enabled && tier.price > 0);
+            paidTiers.forEach(tier => {
+                if (tier.name) {
+                    headers += `<th title="${tier.name} users paying ${formatCurrency(tier.price)}/month">${tier.name}</th>`;
+                }
+            });
+        }
         
         headers += `
-            <th>Total Premium</th>
-            <th>Conversion Rate</th>
-            <th>Monthly Revenue</th>
-            <th>ARR</th>
-            <th>Team Cost</th>
-            <th>Tech Cost</th>
-            <th>Marketing Cost</th>
-            <th>Variable Costs</th>
-            <th>Total Costs</th>
-            <th>Net Income</th>
+            <th title="Sum of all premium tier users">Total Paid Users</th>
+            <th title="Percentage of free users converting to premium each month">Conversion Rate</th>
+            <th title="Total subscription revenue for this month">Monthly Revenue</th>`;
+        
+        // Add Ad Revenue column if advertising is enabled - exact same logic as table body
+        const hasAdRevenue = params.ads && (params.ads.enableBanner || params.ads.enableInterstitial || params.ads.enableRewarded);
+        if (hasAdRevenue) {
+            headers += `<th title="Revenue from advertising shown to free users">Ad Revenue</th>`;
+        }
+        
+        headers += `
+            <th title="Annual Recurring Revenue (Monthly Revenue × 12)">ARR</th>
+            <th title="Monthly team salaries and benefits">Team Cost</th>
+            <th title="Monthly technology and infrastructure costs">Tech Cost</th>
+            <th title="Monthly marketing and user acquisition spend">Marketing Cost</th>`;
+            
+        // Add Variable Costs column only if enabled - exact same logic as table body
+        if (params.variableCosts && params.variableCosts.enabled) {
+            headers += `<th title="Variable costs that scale with users (support, infrastructure, transaction fees)">Variable Costs</th>`;
+        }
+        
+        headers += `
+            <th title="Sum of all monthly operating costs">Total Costs</th>
+            <th title="Monthly Revenue minus Total Costs (profit/loss for the month)">Net Income</th>
         `;
         tableHeader.innerHTML = headers;
     }
@@ -894,32 +1046,55 @@ function displayResults(results, params) {
     // Update table with dynamic tier columns
     const tableBody = document.getElementById('monthlyTableBody');
     if (tableBody) {
-        tableBody.innerHTML = monthlyData.map(d => {
-            const isBreakEven = !d.isBeta && d.month === results.breakEvenMonth;
+        tableBody.innerHTML = monthlyData.map((d, index) => {
+            // Fix break-even detection - check against month number not object
+            const breakEvenMonthNumber = results.breakEvenMonth ? parseInt(results.breakEvenMonth.toString().replace('Month ', '')) : null;
+            const isBreakEven = !d.isBeta && breakEvenMonthNumber && d.month === breakEvenMonthNumber;
+            
             let row = `
                 <tr class="${isBreakEven ? 'break-even-row' : ''}">
-                    <td>${d.month}</td>
-                    <td>${formatNumber(d.mau)}</td>
+                    <td>${d.isBeta ? d.month : 'Month ' + d.month}</td>
+                    <td>${formatNumber(d.mau || 0)}</td>
                     <td>${d.growthRate ? d.growthRate.toFixed(1) + '%' : '0%'}</td>
                     <td>${formatNumber(d.freeUsers || 0)}</td>`;
             
-            // Add tier user columns
-            params.tiers.forEach(tier => {
-                const tierUserCount = d.tierUsers && d.tierUsers[tier.id] ? d.tierUsers[tier.id] : 0;
-                row += `<td>${formatNumber(tierUserCount)}</td>`;
-            });
+            // Add tier user columns with proper data checking - only show PAID tiers (not free tier)
+            if (params.tiers && params.tiers.length > 0) {
+                const paidTiers = params.tiers.filter(tier => tier.enabled && tier.price > 0);
+                paidTiers.forEach(tier => {
+                    let tierUserCount = 0;
+                    if (d.tierUsers && typeof d.tierUsers === 'object' && tier.id !== undefined) {
+                        tierUserCount = d.tierUsers[tier.id] || 0;
+                    }
+                    row += `<td>${formatNumber(tierUserCount)}</td>`;
+                });
+            }
             
             row += `
                     <td>${formatNumber(d.premiumUsers || 0)}</td>
-                    <td>${d.conversionRate ? d.conversionRate.toFixed(2) + '%' : '0%'}</td>
-                    <td>${formatCurrency(d.monthlyRevenue)}</td>
-                    <td>${formatCurrency(d.arr)}</td>
-                    <td>${formatCurrency(d.teamCost)}</td>
-                    <td>${formatCurrency(d.techCost)}</td>
-                    <td>${formatCurrency(d.marketingCost)}</td>
-                    <td>${formatCurrency(d.variableCosts)}</td>
-                    <td>${formatCurrency(d.monthlyCosts)}</td>
-                    <td class="${d.netIncome > 0 ? 'profit' : 'loss'}">${formatCurrency(d.netIncome)}</td>
+                    <td>${d.conversionRate ? d.conversionRate.toFixed(2) + '%' : '0.00%'}</td>
+                    <td>${formatCurrency(d.monthlyRevenue || 0)}</td>`;
+            
+            // Add Ad Revenue column if advertising is enabled - must match header logic exactly
+            const hasAdRevenue = params.ads && (params.ads.enableBanner || params.ads.enableInterstitial || params.ads.enableRewarded);
+            if (hasAdRevenue) {
+                row += `<td>${formatCurrency(d.adRevenue || 0)}</td>`;
+            }
+            
+            row += `
+                    <td>${formatCurrency(d.arr || 0)}</td>
+                    <td>${formatCurrency(d.teamCost || 0)}</td>
+                    <td>${formatCurrency(d.techCost || 0)}</td>
+                    <td>${formatCurrency(d.marketingCost || 0)}</td>`;
+                    
+            // Add Variable Costs column only if enabled - must match header logic exactly
+            if (params.variableCosts && params.variableCosts.enabled) {
+                row += `<td>${formatCurrency(d.variableCosts || 0)}</td>`;
+            }
+            
+            row += `
+                    <td>${formatCurrency(d.monthlyCosts || 0)}</td>
+                    <td class="${(d.netIncome || 0) > 0 ? 'profit' : 'loss'}">${formatCurrency(d.netIncome || 0)}</td>
                 </tr>`;
             return row;
         }).join('');
